@@ -1,0 +1,81 @@
+/* assets/css/gold.css */
+:root {
+    --primary-gold: #FFD700;
+    --primary-gold-dim: rgba(255, 215, 0, 0.1);
+    --gold-gradient-start: rgba(255, 215, 0, 0.15);
+    --gold-gradient-end: rgba(255, 215, 0, 0.05);
+}
+
+/* Override Green with Gold */
+.text-green {
+    color: var(--primary-gold) !important;
+}
+
+.bg-green-dim {
+    background-color: var(--primary-gold-dim) !important;
+}
+
+.btn-primary {
+    background: var(--primary-gold) !important;
+    color: #000 !important;
+    border: none;
+}
+
+.portfolio-card {
+    background: linear-gradient(135deg, var(--gold-gradient-start), var(--gold-gradient-end)) !important;
+    border: 1px solid rgba(255, 215, 0, 0.2) !important;
+}
+
+.portfolio-card::before {
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, transparent 70%) !important;
+}
+
+.pnl-badge {
+    background: var(--primary-gold-dim) !important;
+    color: var(--primary-gold) !important;
+    border: 1px solid rgba(255, 215, 0, 0.2) !important;
+}
+
+.action-icon-box {
+    color: var(--primary-gold) !important;
+}
+
+.nav-item-mobile.active {
+    color: var(--primary-gold) !important;
+}
+
+.nav-trade-mobile {
+    background: var(--primary-gold) !important;
+    box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4) !important;
+}
+
+/* --- Dropdown Contrast Fix --- */
+
+/* Force Select inputs to be clearly dark with gold/white text */
+select.form-select {
+    background-color: #1a1a1f !important;
+    /* Dark background */
+    color: #ffffff !important;
+    /* White Text */
+    border: 1px solid #333 !important;
+    /* Custom caret color if supported */
+}
+
+/* Force Options to be dark */
+select.form-select option {
+    background-color: #1a1a1f !important;
+    color: #ffffff !important;
+}
+
+/* Fix Input groups where select is used */
+.input-group select.form-select {
+    background-color: transparent !important;
+    /* Match parent if glass */
+    color: #fff !important;
+}
+
+/* BUT force options back to opaque dark because glass doesn't work in dropdown list */
+.input-group select.form-select option {
+    background-color: #222 !important;
+    color: #fff !important;
+}

@@ -1,0 +1,414 @@
+/* mobile.css - Global Design System */
+
+:root {
+    /* Colors */
+    --bg-app: #0b0b0f;
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --bg-card-hover: rgba(255, 255, 255, 0.06);
+    --bg-glass: rgba(11, 11, 15, 0.85);
+
+    --primary-green: #00d26a;
+    --primary-green-dim: rgba(0, 210, 106, 0.1);
+    --danger-red: #f04438;
+    --danger-red-dim: rgba(240, 68, 56, 0.1);
+
+    --text-primary: #ffffff;
+    --text-secondary: #98a2b3;
+    --text-tertiary: #667085;
+
+    --border-subtle: rgba(255, 255, 255, 0.05);
+
+    /* Dimensions */
+    --nav-width-desktop: 240px;
+    --nav-height-mobile: 64px;
+    --header-height: 60px;
+}
+
+/* Reset & Base */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    padding-bottom: var(--nav-height-mobile);
+    /* Mobile default */
+}
+
+@media (min-width: 768px) {
+    body {
+        padding-bottom: 0;
+        padding-left: var(--nav-width-desktop);
+    }
+
+    /* Allow container to expand on desktop */
+    main.container {
+        max-width: 1200px !important;
+        margin: 0 auto;
+        padding-top: 2rem;
+    }
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Utilities */
+.text-green {
+    color: var(--primary-green) !important;
+}
+
+.text-red {
+    color: var(--danger-red) !important;
+}
+
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.bg-glass {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.card-glass {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+.card-glass:active {
+    background: var(--bg-card-hover);
+    transform: scale(0.995);
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--primary-green);
+    color: #000;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    transition: transform 0.1s;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background: var(--bg-card-hover);
+}
+
+/* Navigation - Responsive Logic */
+#global-nav {
+    z-index: 1000;
+}
+
+/* Mobile Bottom Nav */
+.nav-mobile {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--nav-height-mobile);
+    background: var(--bg-glass);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.nav-mobile.nav-hidden {
+    transform: translateY(100%);
+}
+
+.nav-item-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    gap: 4px;
+    flex: 1;
+    height: 100%;
+}
+
+.nav-item-mobile.active {
+    color: var(--primary-green);
+}
+
+.nav-item-mobile i {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+}
+
+/* Floating Trade Button (Mobile) */
+.nav-trade-mobile {
+    position: relative;
+    top: -20px;
+    background: var(--primary-green);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    box-shadow: 0 8px 24px rgba(0, 210, 106, 0.4);
+    border: 4px solid var(--bg-app);
+}
+
+/* Desktop Sidebar */
+.nav-desktop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--nav-width-desktop);
+    height: 100vh;
+    background: var(--bg-app);
+    border-right: 1px solid var(--border-subtle);
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 3rem;
+    color: var(--text-primary);
+}
+
+.nav-brand-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--primary-green);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.nav-item-desktop {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.nav-item-desktop:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.nav-item-desktop.active {
+    background: var(--primary-green-dim);
+    color: var(--primary-green);
+}
+
+.nav-item-desktop i {
+    width: 20px;
+    text-align: center;
+}
+
+.user-profile-mini {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    margin-top: auto;
+}
+
+/* Visibility Utilities */
+.d-mobile-only {
+    display: flex !important;
+}
+
+.d-desktop-only {
+    display: none !important;
+}
+
+@media (min-width: 768px) {
+    .d-mobile-only {
+        display: none !important;
+    }
+
+    .d-desktop-only {
+        display: flex !important;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.delay-1 {
+    animation-delay: 0.1s;
+}
+
+.delay-2 {
+    animation-delay: 0.2s;
+}
+
+.delay-3 {
+    animation-delay: 0.3s;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Premium Glass Gradients */
+.glass-gradient-1 {
+    background: radial-gradient(circle at top right, rgba(0, 210, 106, 0.15), transparent 60%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Force Hide Smartsupp Default Button */
+[data-testid="widgetButtonFrame"] {
+    display: none !important;
+}
+
+.glass-gradient-2 {
+    background: radial-gradient(circle at bottom left, rgba(0, 123, 255, 0.1), transparent 60%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Nav Switch */
+.nav-switch-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+}
+
+.nav-switch {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 50px;
+    padding: 4px;
+    display: inline-flex;
+    position: relative;
+    gap: 4px;
+}
+
+.nav-switch-item {
+    padding: 8px 24px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-width: 100px;
+    text-align: center;
+}
+
+.nav-switch-item:hover {
+    color: var(--text-primary);
+}
+
+.nav-switch-item.active {
+    background: var(--bg-glass);
+    color: var(--text-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-subtle);
+}
+
+/* Gold Active State Override */
+body.gold-theme .nav-switch-item.active {
+    color: var(--primary-gold, #FFD700);
+}

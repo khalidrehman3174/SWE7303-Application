@@ -1,0 +1,333 @@
+:root {
+    --primary-color: #00d26a;
+    /* Keep brand green for buttons/active states */
+    --bg-dark: #000000;
+    /* Pure Black */
+
+    /* Solid or very dark cards */
+    --card-bg: #0a0a0a;
+    --card-hover: #111111;
+    --card-glass: #0a0a0a;
+    /* Fallback for glass vars */
+
+    --text-primary: #ffffff;
+    --text-secondary: #e0e0e0;
+    /* Whiteish */
+    --border-color: #333333;
+    /* Visible border for black-on-black */
+    --sidebar-width: 260px;
+    --header-height: 70px;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+}
+
+/* Sidebar */
+.admin-sidebar {
+    width: var(--sidebar-width);
+    background: #000000;
+    /* Pure Black */
+    border-right: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.admin-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    /* Use white instead of green */
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    text-decoration: none;
+}
+
+/* Navigation Styles */
+.nav-link-modern {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    color: var(--text-secondary);
+    border-radius: 8px;
+    /* Slightly sharper */
+    margin-bottom: 0.5rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    border: 1px solid transparent;
+}
+
+.nav-link-modern:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link-modern.active {
+    background: rgba(255, 255, 255, 0.12);
+    /* Higher contrast active state */
+    color: var(--text-primary);
+    border-color: var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    /* Depth */
+}
+
+.nav-link-modern i {
+    width: 24px;
+    text-align: center;
+    margin-right: 0.75rem;
+    color: var(--text-secondary);
+    /* Icon color */
+    transition: color 0.2s;
+}
+
+.nav-link-modern.active i,
+.nav-link-modern:hover i {
+    color: var(--text-primary);
+}
+
+.nav-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 1.5rem 0;
+    opacity: 0.5;
+}
+
+/* Main Content */
+.admin-main {
+    margin-left: var(--sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+/* Cards & Stats */
+.card-modern {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    /* transition: transform 0.2s; removed transition to feel more solid/pro */
+}
+
+.card-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    /* Subtle icon bg */
+    border: 1px solid var(--border-color);
+}
+
+/* Tables - Modern & Professional */
+.table-modern {
+    width: 100%;
+    color: var(--text-secondary);
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table-modern thead th {
+    background: #000;
+    /* Strict Header Background */
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table-modern tbody td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.table-modern tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-modern tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+    /* Subtle row hover */
+    color: #fff;
+}
+
+/* Forms */
+.form-control-modern {
+    background: #000 !important;
+    /* Force black input background */
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.form-control-modern:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 1px var(--primary-color) !important;
+    background: #050505 !important;
+}
+
+.form-control-modern::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Modal - Modern Dark */
+.modal-content.modern-modal,
+.modal-content {
+    /* Targeting standard bootstrap class too for safety */
+    background: #111111;
+    /* Slightly lighter than pure black for depth */
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1.5rem;
+}
+
+.modal-title {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.btn-close {
+    filter: invert(1) opacity(0.7);
+    /* White X */
+}
+
+/* Utilities */
+.text-primary-green {
+    color: var(--primary-color) !important;
+}
+
+.bg-primary-green {
+    background-color: var(--primary-color) !important;
+}
+
+/* Proper Text Muted for Black Theme */
+.text-muted {
+    color: #667085 !important;
+}
+
+/* Icons */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.hover-opacity-100:hover {
+    opacity: 1 !important;
+}
+
+.btn-icon-only {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    background: transparent;
+}
+
+.btn-icon-only:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff !important;
+}
+
+.btn-icon-only.hover-text-white:hover {
+    color: #fff !important;
+}
+
+.btn-icon-only.hover-text-danger:hover {
+    color: #dc3545 !important;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.badge-modern {
+    padding: 0.35em 0.8em;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    border: 1px solid transparent;
+}
+
+/* Responsive */
+.admin-mobile-header {
+    display: none;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+.admin-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.admin-backdrop.show {
+    display: block;
+    opacity: 1;
+}
+
+@media (max-width: 991.98px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .admin-sidebar.show {
+        transform: translateX(0);
+    }
+
+    .admin-main {
+        margin-left: 0;
+        padding: 1.5rem;
+    }
+
+    .admin-mobile-header {
+        display: flex;
+    }
+}
