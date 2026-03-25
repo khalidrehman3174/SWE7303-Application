@@ -1,0 +1,125 @@
+# -------------------------------------------------------
+# Finpay Technologies - Docker Compose (Local Development)
+# Runs the PHP app, MySQL, and Redis locally
+# -------------------------------------------------------
+
+version: '3.8'
+
+services:
+
+  # ── PHP Application ───────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: finpay-app
+    ports:
+      - "8080:80"
+    environment:
+      APP_ENV: development
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: finpaydb
+      DB_USERNAME: finpayadmin
+      DB_PASSWORD: localdevpassword
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: local-dev-jwt-secret-not-for-production
+    volumes:
+      # Mount source code for live reloading in development
+      - ./auth:/var/www/html/auth
+      - ./includes:/var/www/html/includes
+      - ./user:/var/www/html/user
+      - ./assets:/var/www/html/assets
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - finpay-network
+    restart: unless-stopped
+
+  # ── MySQL Database ────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: finpay-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: finpaydb
+      MYSQL_USER: finpayadmin
+      MYSQL_PASSWORD: localdevpassword
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Mount schema file to auto-initialise DB on first run
+      - ./tests/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "finpayadmin", "-plocaldevpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - finpay-network
+    restart: unless-stopped
+
+  # ── Redis Cache ───────────────────────────────────────
+  redis:
+    image: redis:7.0-alpine
+    container_name: finpay-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - finpay-network
+    restart: unless-stopped
+
+  # ── PHPUnit Test Runner ───────────────────────────────
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: finpay-tests
+    environment:
+      APP_ENV: testing
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: finpaydb
+      DB_USERNAME: finpayadmin
+      DB_PASSWORD: localdevpassword
+    volumes:
+      - ./tests:/var/www/html/tests
+      - ./auth:/var/www/html/auth
+      - ./includes:/var/www/html/includes
+      - ./user:/var/www/html/user
+    command: ["./vendor/bin/phpunit", "--testdox", "--colors=always"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - finpay-network
+    profiles:
+      - testing
+
+# ── Volumes ───────────────────────────────────────────
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+
+# ── Networks ──────────────────────────────────────────
+networks:
+  finpay-network:
+    driver: bridge
