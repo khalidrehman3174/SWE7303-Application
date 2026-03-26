@@ -1,33 +1,39 @@
 <?php
-// FinPay End-User Presentation Homepage (Revolut Architecture)
-// V6: Void Fillers, Orbital Crypto Bag, & Trust Badges
+// FinPay End-User Presentation Homepage
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FinPay - One app for all your money. Send, receive, invest in crypto, and manage your finances with bank-grade security.">
     <title>FinPay - One app, all things money</title>
-    <!-- Fonts: Inter for the hyper-clean brutalist aesthetic -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Bootstrap CSS for grid -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* ===== CENTRAL BRAND DESIGN SYSTEM =====
+         * Single source of truth for all colors.
+         * Use these variables everywhere — do not hardcode colors.
+         * Brand accent: Emerald Green (#10b981)
+         * ======================================= */
         :root {
+            --brand-accent:       #10b981;   /* primary brand green — logo, CTAs, badges */
+            --brand-accent-glow:  rgba(16,185,129,0.18);
+            --brand-accent-dim:   rgba(16,185,129,0.1);
+            --brand-dark:         #09090b;   /* near-black for hero panels & CTA blocks */
             --r-black: #191c1f;
             --r-dark: #000000;
             --r-white: #ffffff;
-            --r-gray-100: #fcfcfc;
-            --r-gray-200: #f3f4f6;
-            --r-gray-300: #e5e7eb;
+            --r-gray-50:  #f9fafb;
+            --r-gray-100: #f3f4f6;
+            --r-gray-200: #e5e7eb;
+            --r-gray-300: #d1d5db;
             --r-gray-text: #6b7280;
             --r-blue: #2563eb;
             --r-blue-light: #eff6ff;
             --r-green: #10b981;
             --r-purple: #8b5cf6;
-            --r-pink: #ec4899;
         }
 
         * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
@@ -37,20 +43,46 @@
             color: var(--r-black);
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            background-image:
+                radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.07) 0%, transparent 55%),
+                radial-gradient(ellipse at 90% 0%, rgba(16,185,129,0.04) 0%, transparent 45%);
         }
 
-        /* Abstract Global Mesh Gradient for the Hero */
+        /* Global Mesh — unified with brand accent (emerald green) */
         .global-mesh {
-            position: absolute; top: 0; left: 0; width: 100%; height: 1000px;
-            background: 
-                radial-gradient(ellipse at 15% 0%, rgba(37,99,235,0.06), transparent 50%),
-                radial-gradient(ellipse at 85% 10%, rgba(139,92,246,0.04), transparent 50%);
+            position: absolute; top: 0; left: 0; width: 100%; height: 1100px;
+            background:
+                radial-gradient(ellipse at 10% 0%,  rgba(16,185,129,0.06), transparent 55%),
+                radial-gradient(ellipse at 90% 5%,  rgba(16,185,129,0.04), transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(16,185,129,0.02), transparent 50%);
             z-index: -1; pointer-events: none;
+        }
+
+        /* Subtle professional underline accent instead of rainbow */
+        .accent-word {
+            position: relative;
+            display: inline-block;
+        }
+        .accent-word::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #2563eb, #4f46e5);
+            border-radius: 3px;
+            opacity: 0.35;
+            z-index: -1;
+        }
+        /* Remove the old animated rainbow */
+        .gradient-word {
+            color: var(--r-dark);
         }
 
         /* Essential Typography */
         h1, h2, h3, h4 { font-weight: 800; letter-spacing: -0.04em; color: var(--r-dark); }
-        .headline-super { font-size: clamp(3rem, 10vw, 8.5rem); line-height: 0.95; padding: 0 1rem; }
+        .headline-super { font-size: clamp(2.8rem, 8vw, 6.5rem); line-height: 0.95; padding: 0 1rem; }
         .headline-section { font-size: clamp(2.5rem, 5vw, 4.5rem); line-height: 1.05; margin-bottom: 1.5rem; }
         .headline-card { font-size: clamp(1.8rem, 3vw, 2.5rem); line-height: 1.1; margin-bottom: 1rem; }
         .text-body-large { font-size: 1.25rem; color: var(--r-gray-text); font-weight: 500; line-height: 1.5; }
@@ -68,15 +100,17 @@
             .navbar-rev { padding: 1rem; justify-content: space-between; }
         }
 
-        .nav-logo { font-size: 1.5rem; font-weight: 900; color: var(--r-dark); text-decoration: none; letter-spacing: -1px; }
+        .nav-logo { font-size: 1.5rem; font-weight: 900; color: var(--r-dark); text-decoration: none; letter-spacing: -1px; display: flex; align-items: center; gap: 8px; }
+        .nav-logo-dot { width: 8px; height: 8px; background: var(--brand-accent); border-radius: 50%; box-shadow: 0 0 8px var(--brand-accent-glow); animation: pulse-dot 2s ease-in-out infinite; }
+        @keyframes pulse-dot { 0%, 100% { box-shadow: 0 0 6px var(--brand-accent-glow); } 50% { box-shadow: 0 0 14px rgba(16,185,129,0.9); } }
         .nav-links a { color: var(--r-black); font-weight: 600; font-size: 0.95rem; margin: 0 1.2rem; text-decoration: none; transition: opacity 0.2s; }
         .nav-links a:hover { opacity: 0.6; }
         .btn-rev {
             background: var(--r-dark); color: var(--r-white); padding: 0.8rem 1.8rem;
             border-radius: 100px; font-weight: 700; font-size: 0.95rem; text-decoration: none;
-            transition: transform 0.2s, background 0.2s; border: none; display: inline-block;
+            transition: transform 0.2s, background 0.2s, box-shadow 0.2s; border: none; display: inline-block;
         }
-        .btn-rev:hover { transform: scale(1.02); background: #333; color: var(--r-white); }
+        .btn-rev:hover { transform: scale(1.03); background: #1c1c1e; color: var(--r-white); box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
         
         .btn-rev-light {
             background: rgba(255,255,255,0.1); color: var(--r-white); padding: 0.8rem 1.8rem;
@@ -203,6 +237,14 @@
         .chart-bar { transform-origin: bottom; transform: scaleY(0.1); transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .reveal.active .chart-bar { transform: scaleY(1); }
 
+        /* Section Eyebrow Labels */
+        .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; border-radius: 100px; background: rgba(37,99,235,0.08); color: var(--r-blue); margin-bottom: 1.25rem; }
+        .eyebrow.green { background: rgba(16,185,129,0.1); color: var(--r-green); }
+        .eyebrow.dark { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+
+        /* Hero Sub */
+        .hero-sub { font-size: clamp(1rem, 2vw, 1.25rem); color: var(--r-gray-text); font-weight: 500; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+
         /* Component Transitions */
         .reveal { opacity: 0; transform: translateY(40px); transition: 1s cubic-bezier(0.2,0.8,0.2,1); }
         .reveal.active { opacity: 1; transform: translateY(0); }
@@ -212,6 +254,380 @@
         .text-max-500 { max-width: 500px; position: relative; z-index: 10; padding-bottom: 20px; }
         .padding-section { padding: 140px 0; }
         .pt-hero { padding-top: 220px; padding-bottom: 100px; }
+
+        /* Big terminal CTA */
+        .cta-terminal {
+            background: var(--r-dark);
+            border-radius: 40px;
+            padding: 5rem 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .cta-terminal::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(37,99,235,0.3) 0%, transparent 70%);
+            filter: blur(40px);
+            pointer-events: none;
+        }
+        .cta-terminal::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            right: -10%;
+            width: 400px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(139,92,246,0.2) 0%, transparent 70%);
+            filter: blur(50px);
+            pointer-events: none;
+        }
+        .btn-rev-outline {
+            background: transparent; color: rgba(255,255,255,0.7); padding: 0.9rem 2rem;
+            border-radius: 100px; font-weight: 700; font-size: 1rem; text-decoration: none;
+            border: 1.5px solid rgba(255,255,255,0.2); display: inline-block; transition: all 0.2s;
+        }
+        .btn-rev-outline:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.4); }
+
+        /* Revolut-style Hub Section */
+        .hub-section {
+            background: #09090b;
+            border-radius: 40px;
+            padding: 4rem;
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            min-height: 600px;
+            margin-bottom: 1.5rem;
+        }
+        .hub-section::before {
+            content: '';
+            position: absolute;
+            top: -200px; left: -200px;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 65%);
+            filter: blur(60px);
+            pointer-events: none;
+        }
+        .hub-section::after {
+            content: '';
+            position: absolute;
+            bottom: -150px; right: -100px;
+            width: 500px; height: 400px;
+            background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 60%);
+            filter: blur(80px);
+            pointer-events: none;
+        }
+        .hub-phone {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* Glass phone frame */
+        .phone-frame {
+            width: 260px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 40px;
+            padding: 2rem 1.5rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+            position: relative;
+        }
+        .phone-notch {
+            width: 80px; height: 8px; background: rgba(255,255,255,0.1);
+            border-radius: 100px; margin: 0 auto 1.5rem;
+        }
+        .phone-balance {
+            text-align: center; margin-bottom: 1.5rem;
+        }
+        .phone-balance-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+        .phone-balance-amount { font-size: 2.6rem; font-weight: 900; color: #fff; letter-spacing: -2px; line-height: 1; margin: 6px 0; }
+        .phone-balance-change { font-size: 0.8rem; color: #10b981; font-weight: 700; }
+        .phone-actions {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1.5rem;
+        }
+        .phone-action-btn {
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px; padding: 12px 6px; text-align: center;
+        }
+        .phone-action-btn i { color: #fff; font-size: 0.9rem; display: block; margin-bottom: 4px; }
+        .phone-action-btn span { font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; }
+        .phone-tx { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .phone-tx:last-child { border-bottom: none; }
+        .phone-tx-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+        .phone-tx-name { font-size: 0.8rem; font-weight: 700; color: #fff; }
+        .phone-tx-date { font-size: 0.65rem; color: rgba(255,255,255,0.35); }
+        .phone-tx-amt { font-size: 0.85rem; font-weight: 800; }
+        /* Floating chips around phone */
+        .hub-chip {
+            position: absolute;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 12px 16px;
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            z-index: 3;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+        }
+        .hub-chip-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+        .hub-chip-title { font-size: 0.8rem; font-weight: 800; color: #fff; }
+        .hub-chip-sub { font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 600; }
+        @media (max-width: 900px) {
+            .hub-section { grid-template-columns: 1fr; gap: 3rem; padding: 2.5rem 1.5rem; min-height: auto; }
+            .hub-chip { display: none; }
+        }
+
+        /* grey.co inspired Feature Row */
+        .feature-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            padding: 5rem 0;
+        }
+        @media (max-width: 768px) { .feature-row { grid-template-columns: 1fr; padding: 3rem 0; } }
+        .feature-item { padding: 0 1rem; }
+        .feature-item-icon {
+            width: 52px; height: 52px; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; margin-bottom: 1.25rem;
+            background: var(--r-gray-100);
+        }
+        .feature-item h4 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 0.5rem; color: var(--r-dark); }
+        .feature-item p { font-size: 0.95rem; color: var(--r-gray-text); font-weight: 500; line-height: 1.6; }
+
+        /* Testimonials */
+        .testimonial-card {
+            background: var(--r-white);
+            border: 1px solid var(--r-gray-300);
+            border-radius: 24px;
+            padding: 2rem;
+            flex: 1 1 280px;
+            max-width: 340px;
+        }
+        /* === PREMIUM DARK HERO === */
+        .hero-dark {
+            background: #09090b;
+            border-radius: 40px;
+            padding: 8rem 2rem 5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        .hero-grid-overlay {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            mask-image: radial-gradient(ellipse at center top, rgba(0,0,0,0.5) 0%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at center top, rgba(0,0,0,0.5) 0%, transparent 70%);
+        }
+        .hero-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            pointer-events: none;
+        }
+        .hero-orb-1 { width: 600px; height: 400px; background: rgba(99,102,241,0.18); top: -10%; left: 50%; transform: translateX(-60%); }
+        .hero-orb-2 { width: 400px; height: 300px; background: rgba(16,185,129,0.1); bottom: 0; right: 5%; }
+        .hero-accent {
+            background: linear-gradient(100deg, #fff 30%, rgba(255,255,255,0.55));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-badge { font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.45); display: flex; align-items: center; gap: 6px; }
+        .hero-badge-sep { color: rgba(255,255,255,0.15); font-size: 0.75rem; }
+        /* Hero Metric Strip */
+        .hero-metric-strip {
+            display: inline-flex; align-items: center; gap: 0;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 20px;
+            padding: 1.25rem 2.5rem;
+            margin-top: 4rem;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .hero-metric-val { font-size: 1.8rem; font-weight: 900; color: #fff; letter-spacing: -2px; line-height: 1; }
+        .hero-metric-label { font-size: 0.75rem; color: rgba(255,255,255,0.35); font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .hero-metric-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+        @media (max-width: 768px) {
+            .hero-dark { padding: 6rem 1.5rem 3rem; border-radius: 28px; }
+            .hero-metric-strip { gap: 1.5rem; padding: 1rem 1.5rem; }
+            .hero-metric-divider { display: none; }
+            .hero-badge-sep { display: none; }
+        }
+
+        /* === SPLIT-SCREEN HERO === */
+        .hero-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            padding: 8rem 0 5rem;
+            min-height: 90vh;
+        }
+        @media (max-width: 991px) {
+            .hero-split { grid-template-columns: 1fr; padding: 7rem 0 3rem; min-height: auto; }
+            .hero-right-panel { display: none; }
+        }
+        .hero-right-panel {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+        }
+        /* Main account card */
+        .hero-card-main {
+            width: 310px;
+            background: #09090b;
+            border-radius: 32px;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
+            position: relative;
+            z-index: 3;
+        }
+        .hero-card-label { font-size: 0.7rem; color: rgba(255,255,255,0.35); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+        .hero-card-amount { font-size: 3rem; font-weight: 900; color: #fff; letter-spacing: -3px; line-height: 1; margin: 10px 0 6px; }
+        .hero-card-change { font-size: 0.82rem; color: #10b981; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 1.75rem; }
+        .hero-card-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0 0 1.5rem; }
+        .hero-card-tx { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .hero-card-tx:last-child { border-bottom: none; }
+        .hero-card-tx-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+        .hero-card-tx-name { font-size: 0.82rem; font-weight: 700; color: rgba(255,255,255,0.85); }
+        .hero-card-tx-date { font-size: 0.65rem; color: rgba(255,255,255,0.3); }
+        /* Floating mini-card: FX rate */
+        .hero-float-fx {
+            position: absolute;
+            bottom: 10%;
+            left: -10%;
+            width: 210px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+            z-index: 4;
+        }
+        .hero-float-label { font-size: 0.65rem; font-weight: 700; color: var(--r-gray-text); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .hero-float-rate { font-size: 1.6rem; font-weight: 900; color: var(--r-dark); letter-spacing: -1.5px; line-height: 1; }
+        .hero-float-sub { font-size: 0.75rem; color: var(--r-green); font-weight: 700; margin-top: 4px; }
+        /* Floating chip: Send success */
+        .hero-float-chip {
+            position: absolute;
+            top: 10%;
+            right: -6%;
+            background: #fff;
+            border-radius: 100px;
+            padding: 10px 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 4;
+            white-space: nowrap;
+        }
+        .hero-float-chip-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px rgba(16,185,129,0.6); }
+        /* Decorative background for right panel */
+        .hero-panel-bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 70% 20%, rgba(99,102,241,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 20% 80%, rgba(16,185,129,0.05) 0%, transparent 50%);
+            border-radius: 40px;
+            z-index: 0;
+        }
+
+        /* === PROFESSIONAL FEATURE ICON === */
+        .feat-icon-wrap {
+            width: 52px; height: 52px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        /* ===== LIGHT FOOTER ===== */
+        .footer-dark {
+            background: var(--r-gray-50);
+            padding: 5rem 0 0;
+            border-top: 1px solid var(--r-gray-200);
+        }
+        .footer-link {
+            color: var(--r-gray-text);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 0.75rem;
+            transition: color 0.2s;
+        }
+        .footer-link:hover { color: var(--r-dark); }
+        .footer-col-head {
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin-bottom: 1.25rem;
+        }
+        .footer-bottom {
+            border-top: 1px solid var(--r-gray-200);
+            padding: 2rem 0;
+            margin-top: 4rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .footer-reg-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--brand-accent-dim);
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 100px;
+            padding: 5px 14px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--brand-accent);
+        }
+
+        /* ===== MOBILE RESPONSIVE OVERRIDES ===== */
+        @media (max-width: 768px) {
+            .footer-grid-cols { grid-template-columns: 1fr 1fr !important; gap: 2.5rem !important; }
+            .footer-brand-col { grid-column: 1 / -1; }
+            .footer-bottom { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .hero-split { padding: 5rem 0 2rem !important; }
+            .hub-section { padding: 2rem 1.5rem !important; border-radius: 24px !important; }
+            .presentation-wrap { padding: 0 1.25rem; }
+            .cta-terminal { border-radius: 24px !important; }
+            .p-block { min-height: auto !important; padding: 2rem 1.5rem !important; border-radius: 28px !important; }
+        }
+        @media (max-width: 480px) {
+            .footer-grid-cols { grid-template-columns: 1fr !important; }
+            .hero-metric-strip { padding: 1rem !important; gap: 1rem !important; }
+        }
     </style>
 </head>
 <body>
@@ -219,46 +635,109 @@
     <!-- Catchy Global Mesh -->
     <div class="global-mesh"></div>
 
-    <nav class="navbar-rev">
-        <a href="index.php" class="nav-logo">finpay</a>
+    <nav class="navbar-rev" id="mainNav">
+        <a href="index.php" class="nav-logo">
+            <div class="nav-logo-dot"></div>
+            finpay
+        </a>
         
         <div class="nav-links d-none d-md-flex">
-            <a href="#features" class="opacity-75">Features</a>
-            <a href="#cards" class="opacity-75">Cards</a>
-            <a href="#crypto" class="opacity-75">Crypto</a>
-            <a href="#wealth" class="opacity-75">Wealth</a>
+            <a href="#features">Features</a>
+            <a href="#cards">Cards</a>
+            <a href="#crypto">Crypto</a>
+            <a href="#wealth">Wealth</a>
         </div>
 
         <div class="d-flex align-items-center gap-3">
-            <a href="user/login.php" class="nav-links d-none d-sm-block text-decoration-none fw-bold" style="color: var(--r-dark);">Log in</a>
-            <a href="user/index.php" class="btn-rev">Sign up</a>
+            <a href="auth/login.php" class="nav-links d-none d-sm-block text-decoration-none fw-bold" style="color: var(--r-dark);">Log in</a>
+            <a href="auth/signup.php" class="btn-rev">Get started</a>
         </div>
     </nav>
 
     <main class="presentation-wrap">
         
-        <!-- Brutalist Hero -->
-        <section class="text-center pt-hero reveal">
-            <h1 class="headline-super">One app,<br>all things money.</h1>
-            <p class="hero-sub mt-4">From easy money management to crypto trading. Open your FinPay account in a flash and take control of your financial life.</p>
-            <div class="d-flex justify-content-center gap-3 mt-5">
-                <a href="user/index.php" class="btn-rev" style="padding: 1rem 3rem; font-size: 1.1rem;">Get a free account</a>
+        <!-- Split-screen Hero: Left type, Right floating UI -->
+        <section class="hero-split reveal" id="hero">
+
+            <!-- LEFT COLUMN: Copy + CTAs -->
+            <div>
+                <div class="eyebrow mb-4" style="background: rgba(16,185,129,0.08); color: var(--r-green);"><i class="fas fa-bolt"></i> Introducing FinPay</div>
+                <h1 class="headline-super" style="padding: 0; text-align: left;">One app,<br><span class="accent-word">all things</span><br>money.</h1>
+                <p class="hero-sub mt-4" style="text-align: left; max-width: 480px;">FinPay is the all-in-one financial super app. Send money globally, invest in crypto, manage your cards, and track your wealth &mdash; all in one beautifully designed account.</p>
+                <div class="d-flex align-items-center flex-wrap gap-3 mt-5">
+                    <a href="auth/signup.php" class="btn-rev" style="padding: 1rem 2.5rem; font-size: 1.05rem;">Open a free account <i class="fas fa-arrow-right ms-2"></i></a>
+                    <a href="auth/login.php" style="font-weight: 700; color: var(--r-dark); text-decoration: none; font-size: 0.95rem;">Log in <i class="fas fa-arrow-right ms-1" style="font-size: 0.8rem;"></i></a>
+                </div>
+                <!-- Trust row -->
+                <div class="d-flex align-items-center flex-wrap gap-4 mt-5 pt-2" style="border-top: 1px solid var(--r-gray-300);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-shield-halved" style="color: var(--r-green); font-size: 1rem;"></i>
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--r-gray-text);">FCA Regulated</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-lock" style="color: var(--r-blue); font-size: 1rem;"></i>
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--r-gray-text);">256-bit Encryption</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="color: #f59e0b; font-size: 0.75rem;"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--r-gray-text);">4.9 App Store</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Trust Badges directly beneath CTA to fill the empty Hero void -->
-            <div class="d-flex flex-wrap justify-content-center align-items-center gap-4 mt-5 pt-4" style="opacity: 0.5;">
-                <div class="d-flex align-items-center gap-2">
-                    <div style="color: #000; font-size: 1rem;"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div>
-                    <div style="font-weight: 700; font-size: 0.85rem;">4.9 App Store</div>
+            <!-- RIGHT COLUMN: Floating Product UI -->
+            <div class="hero-right-panel">
+                <div class="hero-panel-bg"></div>
+
+                <!-- Floating success chip -->
+                <div class="hero-float-chip">
+                    <div class="hero-float-chip-dot"></div>
+                    <span style="font-size: 0.82rem; font-weight: 800; color: var(--r-dark);">Payment sent &mdash; £340</span>
                 </div>
-                <div class="d-none d-sm-block" style="width: 1px; height: 16px; background: var(--r-dark);"></div>
-                <div style="font-weight: 700; font-size: 0.85rem;"><i class="fas fa-shield-alt me-2"></i>FCA Regulated</div>
-                <div class="d-none d-sm-block" style="width: 1px; height: 16px; background: var(--r-dark);"></div>
-                <div style="font-weight: 700; font-size: 0.85rem;"><i class="fas fa-users me-2"></i>1M+ Active Users</div>
+
+                <!-- Main dark card: Account overview -->
+                <div class="hero-card-main">
+                    <div class="hero-card-label">Total Balance</div>
+                    <div class="hero-card-amount">&pound;18,340<span style="font-size: 1.4rem; opacity: 0.35;">.00</span></div>
+                    <div class="hero-card-change"><i class="fas fa-arrow-trend-up"></i> +6.2% this month</div>
+                    <div class="hero-card-divider"></div>
+                    <div class="hero-card-tx">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="hero-card-tx-icon" style="background:#111;"><i class="fab fa-apple" style="color:#fff;"></i></div>
+                            <div><div class="hero-card-tx-name">Apple Store</div><div class="hero-card-tx-date">Today, 9:42 AM</div></div>
+                        </div>
+                        <div style="font-size:0.85rem;font-weight:800;color:#ef4444;">-&pound;12.99</div>
+                    </div>
+                    <div class="hero-card-tx">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="hero-card-tx-icon" style="background:linear-gradient(135deg,#fbc531,#f7931a);"><i class="fab fa-bitcoin" style="color:#fff;font-size:0.75rem;"></i></div>
+                            <div><div class="hero-card-tx-name">Bitcoin</div><div class="hero-card-tx-date">Yesterday</div></div>
+                        </div>
+                        <div style="font-size:0.85rem;font-weight:800;color:#10b981;">+&pound;340</div>
+                    </div>
+                    <div class="hero-card-tx">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="hero-card-tx-icon" style="background:#6366f1;"><i class="fas fa-plane" style="color:#fff;"></i></div>
+                            <div><div class="hero-card-tx-name">Ryanair</div><div class="hero-card-tx-date">Mon, 24 Mar</div></div>
+                        </div>
+                        <div style="font-size:0.85rem;font-weight:800;color:#ef4444;">-&pound;89.00</div>
+                    </div>
+                </div>
+
+                <!-- Floating FX rate card -->
+                <div class="hero-float-fx">
+                    <div class="hero-float-label">Live Rate</div>
+                    <div style="display:flex;align-items:baseline;gap:4px;">
+                        <span style="font-size:0.75rem;font-weight:700;color:var(--r-gray-text);">GBP &rarr; EUR</span>
+                    </div>
+                    <div class="hero-float-rate">1.168</div>
+                    <div class="hero-float-sub"><i class="fas fa-arrow-trend-up me-1"></i>Interbank rate &bull; No fees</div>
+                </div>
             </div>
+
         </section>
 
-        <!-- Infinite Integrated Partners Marquee -->
+        <!-- Partner Marquee -->
         <div class="marquee-container reveal">
             <div class="marquee-content">
                 <!-- Set 1 -->
@@ -280,54 +759,150 @@
             </div>
         </div>
 
-        <!-- Block 1: Catchy Orbital Balance Mockup -->
-        <section class="p-block p-block-dark mb-4 reveal text-center interactive-block" style="min-height: 750px;">
-            <div class="text-max-800 mx-auto" style="pointer-events: none;">
-                <h2 class="headline-section text-white">Manage your entire financial life in one place.</h2>
-                <p class="text-body-large text-white opacity-75">Track balances, send money instantly, and review your analytics without leaving the app.</p>
+
+
+        <!-- Revolut-style Hub Section: pure dark + glassmorphic floating UI -->
+        <section class="hub-section reveal mb-4" id="hub">
+
+            <!-- LEFT: Text Content -->
+            <div style="position: relative; z-index: 2;">
+                <div class="eyebrow dark" style="margin-bottom: 1.5rem;"><i class="fas fa-mobile-screen"></i> Your financial hub</div>
+                <h2 style="font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 900; color: #fff; letter-spacing: -2px; line-height: 1.05; margin-bottom: 1.5rem;">Everything you need, beautifully in one place.</h2>
+                <p style="color: rgba(255,255,255,0.55); font-size: 1.05rem; font-weight: 500; line-height: 1.75; margin-bottom: 2rem; max-width: 440px;">FinPay replaces your bank account, investment app, and crypto wallet. Check your real-time portfolio, send payments instantly, and invest in global markets &mdash; from a single screen.</p>
+                <!-- Three bullet points -->
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2.5rem;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-check" style="color: #10b981; font-size: 0.75rem;"></i></div>
+                        <span style="color: rgba(255,255,255,0.7); font-size: 0.95rem; font-weight: 600;">Real-time balance and portfolio tracking</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(37,99,235,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-check" style="color: #2563eb; font-size: 0.75rem;"></i></div>
+                        <span style="color: rgba(255,255,255,0.7); font-size: 0.95rem; font-weight: 600;">Instant payments to 50+ countries</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(139,92,246,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-check" style="color: #8b5cf6; font-size: 0.75rem;"></i></div>
+                        <span style="color: rgba(255,255,255,0.7); font-size: 0.95rem; font-weight: 600;">Crypto, stocks, and FX — all in one dashboard</span>
+                    </div>
+                </div>
+                <a href="auth/signup.php" class="btn-rev" style="padding: 1rem 2.2rem;">Open your account <i class="fas fa-arrow-right ms-2"></i></a>
             </div>
-            
-            <div class="mock-orbital-container target-3d">
-                
-                <!-- Center Core Component -->
-                <div class="ui-interactive mock-bal-main" style="--base-rot: 0deg;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div style="font-weight: 700; color: var(--r-gray-text); font-size: 0.85rem; letter-spacing: 1px;">TOTAL BALANCE</div>
-                        <div style="background: rgba(16,185,129,0.1); color: var(--r-green); padding: 6px 14px; border-radius: 100px; font-weight: 800; font-size: 0.8rem;"><i class="fas fa-chart-line me-1"></i> +4.2%</div>
-                    </div>
-                    <div class="mock-bal-stat">£14,250<span style="font-size: 1.5rem; color: var(--r-gray-text);">.00</span></div>
-                    <div class="d-flex gap-2">
-                        <div class="mock-btn"><i class="fas fa-arrow-up me-2"></i> Send</div>
-                        <div class="mock-btn secondary"><i class="fas fa-plus me-2"></i> Add</div>
+
+            <!-- RIGHT: Glassmorphic Phone Mockup -->
+            <div class="hub-phone">
+
+                <!-- Floating Chip: Salary -->
+                <div class="hub-chip" style="top: 5%; left: -8%;">
+                    <div class="hub-chip-icon" style="background: rgba(16,185,129,0.2);"><i class="fas fa-briefcase" style="color: #10b981;"></i></div>
+                    <div>
+                        <div class="hub-chip-title">Salary</div>
+                        <div class="hub-chip-sub">+£4,800 today</div>
                     </div>
                 </div>
 
-                <!-- Floating Satellite 1 -->
-                <div class="ui-interactive mock-tx-orb-1">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <div class="mock-av" style="background: linear-gradient(135deg, #34d399, #10b981);"><i class="fas fa-briefcase"></i></div>
-                            <div class="ms-3 text-start">
-                                <div style="font-weight: 800; font-size: 0.95rem; color: var(--r-dark);">Salary</div>
-                                <div style="font-size: 0.75rem; color: var(--r-gray-text);">Yesterday</div>
-                            </div>
+                <!-- Phone Frame -->
+                <div class="phone-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-balance">
+                        <div class="phone-balance-label">Total Balance</div>
+                        <div class="phone-balance-amount">£18,340</div>
+                        <div class="phone-balance-change"><i class="fas fa-arrow-trend-up me-1"></i>+6.2% this month</div>
+                    </div>
+                    <div class="phone-actions">
+                        <div class="phone-action-btn"><i class="fas fa-arrow-up"></i><span>Send</span></div>
+                        <div class="phone-action-btn"><i class="fas fa-arrow-down"></i><span>Receive</span></div>
+                        <div class="phone-action-btn"><i class="fas fa-plus"></i><span>Top Up</span></div>
+                    </div>
+                    <div class="phone-tx">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="phone-tx-icon" style="background:#111;"><i class="fab fa-apple" style="color:#fff;"></i></div>
+                            <div><div class="phone-tx-name">Apple Store</div><div class="phone-tx-date">Today, 9:42 AM</div></div>
                         </div>
-                        <div style="font-weight: 900; color: var(--r-green); font-size: 1.1rem;">+£4.2k</div>
+                        <div class="phone-tx-amt" style="color:#ef4444;">-£12.99</div>
+                    </div>
+                    <div class="phone-tx">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="phone-tx-icon" style="background:linear-gradient(135deg,#fbc531,#f7931a);"><i class="fab fa-bitcoin" style="color:#fff;font-size:0.7rem;"></i></div>
+                            <div><div class="phone-tx-name">Bitcoin</div><div class="phone-tx-date">Yesterday</div></div>
+                        </div>
+                        <div class="phone-tx-amt" style="color:#10b981;">+£340</div>
+                    </div>
+                    <div class="phone-tx">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="phone-tx-icon" style="background:#6366f1;"><i class="fas fa-shopping-bag" style="color:#fff;"></i></div>
+                            <div><div class="phone-tx-name">Amazon</div><div class="phone-tx-date">Mon, 14 Mar</div></div>
+                        </div>
+                        <div class="phone-tx-amt" style="color:#ef4444;">-£67.50</div>
                     </div>
                 </div>
 
-                <!-- Floating Satellite 2 -->
-                <div class="ui-interactive mock-tx-orb-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <div class="mock-av" style="background: #111;"><i class="fab fa-apple"></i></div>
-                            <div class="ms-3 text-start">
-                                <div style="font-weight: 800; font-size: 0.95rem; color: var(--r-dark);">Apple Store</div>
-                                <div style="font-size: 0.75rem; color: var(--r-gray-text);">Today</div>
-                            </div>
-                        </div>
-                        <div style="font-weight: 900; color: var(--r-dark); font-size: 1.1rem;">-£99<span style="font-size: 0.8rem; color: var(--r-gray-text);">.00</span></div>
+                <!-- Floating Chip: Crypto -->
+                <div class="hub-chip" style="bottom: 8%; right: -10%;">
+                    <div class="hub-chip-icon" style="background: rgba(251,197,49,0.15);"><i class="fab fa-bitcoin" style="color: #f7931a;"></i></div>
+                    <div>
+                        <div class="hub-chip-title">BTC Portfolio</div>
+                        <div class="hub-chip-sub">£2,840 &uarr; 3.1%</div>
                     </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- Feature Row: More than just banking (professional icon treatment) -->
+        <section class="reveal" style="padding: 5rem 0; border-top: 1px solid var(--r-gray-300);">
+            <div class="text-center mb-5">
+                <div class="eyebrow mx-auto mb-3" style="background: rgba(99,102,241,0.08); color: #6366f1;"><i class="fas fa-layer-group"></i> Built for the modern world</div>
+                <h2 style="font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 900; letter-spacing: -1.5px;">More than just banking.</h2>
+                <p style="color: var(--r-gray-text); max-width: 480px; margin: 0.75rem auto 0; font-size: 1rem; font-weight: 500;">A complete financial operating system — built for speed, security, and global reach.</p>
+            </div>
+            <div class="feature-row">
+
+                <div class="feature-item">
+                    <div class="feat-icon-wrap" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 8px 24px rgba(37,99,235,0.25);">
+                        <i class="fas fa-user-plus" style="color:#fff; font-size:1.1rem;"></i>
+                    </div>
+                    <h4>Open an account in minutes</h4>
+                    <p>No queues, no paperwork. Sign up, verify, and you're live. The fastest path to a fully functional bank account &mdash; anywhere in the world.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feat-icon-wrap" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 8px 24px rgba(16,185,129,0.25);">
+                        <i class="fas fa-earth-americas" style="color:#fff; font-size:1.1rem;"></i>
+                    </div>
+                    <h4>Send money across 50+ countries</h4>
+                    <p>Real exchange rates, zero hidden fees. Your money arrives fast, wherever it needs to go &mdash; from London to Lagos in seconds.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feat-icon-wrap" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 8px 24px rgba(245,158,11,0.25);">
+                        <i class="fas fa-chart-line" style="color:#fff; font-size:1.1rem;"></i>
+                    </div>
+                    <h4>Grow with crypto &amp; FX</h4>
+                    <p>Buy Bitcoin with just &pound;1, or swap 30+ fiat currencies at interbank rates. Investing has never been this accessible.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feat-icon-wrap" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); box-shadow: 0 8px 24px rgba(139,92,246,0.25);">
+                        <i class="fas fa-shield-halved" style="color:#fff; font-size:1.1rem;"></i>
+                    </div>
+                    <h4>Bank-grade security, 24/7</h4>
+                    <p>AES-256 encryption, biometric login, AI fraud monitoring, and one-tap card freeze. Every layer of your money is protected.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feat-icon-wrap" style="background: linear-gradient(135deg, #ec4899, #db2777); box-shadow: 0 8px 24px rgba(236,72,153,0.25);">
+                        <i class="fas fa-credit-card" style="color:#fff; font-size:1.1rem;"></i>
+                    </div>
+                    <h4>Premium virtual &amp; physical cards</h4>
+                    <p>Generate virtual cards instantly for safer online spending. Order a sleek physical card with smart spending controls built in.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feat-icon-wrap" style="background: linear-gradient(135deg, #14b8a6, #0d9488); box-shadow: 0 8px 24px rgba(20,184,166,0.25);">
+                        <i class="fas fa-chart-bar" style="color:#fff; font-size:1.1rem;"></i>
+                    </div>
+                    <h4>Smart spending insights</h4>
+                    <p>Transactions auto-categorize into food, travel, subscriptions, and more. See your money clearly &mdash; and build smarter habits.</p>
                 </div>
 
             </div>
@@ -338,9 +913,10 @@
             
             <!-- Send & Receive -->
             <div class="p-block reveal interactive-block">
+                <div class="eyebrow"><i class="fas fa-paper-plane"></i> Instant Transfers</div>
                 <div class="text-max-500">
-                    <h3 class="headline-card">Sending money is as easy as sending a text.</h3>
-                    <p class="text-body">Send and request money effortlessly from friends, family, or global businesses in seconds. No hidden fees.</p>
+                    <h3 class="headline-card">Send money anywhere in seconds.</h3>
+                    <p class="text-body">Paying a friend back for dinner? Sending money to family overseas? FinPay processes payments in real-time — no delays, no hidden fees, no paperwork. Just tap and it's done.</p>
                 </div>
                 
                 <!-- Main Transfer UI -->
@@ -373,9 +949,10 @@
 
             <!-- Virtual Cards -->
             <div class="p-block p-block-blue reveal interactive-block" id="cards">
+                <div class="eyebrow" style="background: rgba(99,102,241,0.08); color: #6366f1;"><i class="fas fa-credit-card"></i> Smart Cards</div>
                 <div class="text-max-500">
-                    <h3 class="headline-card">A card for every occasion.</h3>
-                    <p class="text-body">Generate virtual cards instantly for online shopping, or order a sleek physical card. Freeze directly in the app.</p>
+                    <h3 class="headline-card">Your card, your rules.</h3>
+                    <p class="text-body">Get virtual cards instantly for safer online spending, or order a premium physical card delivered to your door. Freeze, unfreeze, set limits — you're always in control.</p>
                 </div>
                 
                 <!-- 3D Stacking Cards -->
@@ -409,9 +986,10 @@
 
             <!-- Analytics -->
             <div class="p-block reveal interactive-block" id="wealth">
+                <div class="eyebrow green"><i class="fas fa-chart-bar"></i> Spending Analytics</div>
                 <div class="text-max-500">
-                    <h3 class="headline-card">Track, budget, and conquer.</h3>
-                    <p class="text-body">Visualize your spending explicitly. FinPay categorizes your transactions perfectly so you know exactly where your capital is going.</p>
+                    <h3 class="headline-card">Know exactly where every penny goes.</h3>
+                    <p class="text-body">FinPay automatically categorizes your transactions — food, travel, subscriptions, shopping. See the full picture of your spending at a glance and build better financial habits.</p>
                 </div>
                 
                 <div class="ui-interactive mock-transfer-card border-0 shadow-lg target-3d" style="width: 300px; background: white; --base-rot: 0deg;">
@@ -427,17 +1005,18 @@
                     </div>
                 </div>
 
-                <!-- Floating Tag filling the top-right void -->
-                <div class="ui-interactive hide-mobile shadow-lg target-3d" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 12px 20px; border-radius: 100px; color: var(--r-dark); font-weight: 800; right: 30px; top: 120px; --base-rot: 8deg; transform: rotate(8deg); display: flex; align-items: center; gap: 10px;">
+                <!-- Floating Tag — bottom-right to avoid eyebrow -->
+                <div class="ui-interactive hide-mobile shadow-lg target-3d" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 12px 20px; border-radius: 100px; color: var(--r-dark); font-weight: 800; right: 30px; bottom: 180px; --base-rot: 8deg; transform: rotate(8deg); display: flex; align-items: center; gap: 10px; z-index: 10;">
                     <div style="width: 12px; height: 12px; background: var(--r-pink); border-radius: 50%;"></div> Groceries
                 </div>
             </div>
 
             <!-- Currency/FX -->
             <div class="p-block reveal interactive-block" style="background: radial-gradient(circle at top left, #fef3c7, #fde68a);">
+                <div class="eyebrow" style="background: rgba(217,119,6,0.1); color: #d97706;"><i class="fas fa-globe"></i> Global Exchange</div>
                 <div class="text-max-500">
-                    <h3 class="headline-card">Exchange currency instantly.</h3>
-                    <p class="text-body" style="color: #92400e;">Hold over 30 currencies and exchange them in real-time at excellent rates. Perfect for your next trip globally.</p>
+                    <h3 class="headline-card">Hold 30+ currencies. Exchange in real-time.</h3>
+                    <p class="text-body" style="color: #92400e;">Traveling? Working abroad? FinPay gives you interbank exchange rates with zero markup. Hold dollars, euros, pounds, and swap between them instantly — no bank branch required.</p>
                 </div>
                 
                 <div class="ui-interactive mock-transfer-card shadow-lg border-0 target-3d" style="--base-rot: 0deg;">
@@ -463,72 +1042,218 @@
 
         </div>
 
-        <!-- Full Width Crypto Presentation: The Cloud Bag -->
+    </main>
         <section class="p-block p-block-dark mb-5 reveal interactive-block" style="min-height: 600px; background: radial-gradient(circle at right center, rgba(37,99,235,0.1), transparent 50%), radial-gradient(circle at left bottom, rgba(236,72,153,0.05), transparent 40%), var(--r-dark);" id="crypto">
             <div class="text-max-500" style="pointer-events: none;">
-                <h2 class="headline-section text-white">Crypto, without the cryptic.</h2>
-                <p class="text-body-large text-white opacity-75">Buy, sell, and hold Bitcoin, Ethereum, Solana, and 100+ other tokens. Start building your portfolio with just £1.</p>
+                <div class="eyebrow dark"><i class="fab fa-bitcoin"></i> 100+ Crypto Assets</div>
+                <h2 class="headline-section text-white">The world's top cryptocurrencies, in your pocket.</h2>
+                <p class="text-body-large text-white opacity-75">Buy Bitcoin, sell Ethereum, stake Solana — or just hold. FinPay gives you real-time prices, portfolio tracking, and instant swaps across 100+ tokens. No confusing wallets, no jargon. Just crypto made simple.</p>
                 <div class="mt-4 pointer-events-auto">
-                    <a href="user/index.php" class="btn-rev-light">Explore 100+ Tokens</a>
+                    <a href="auth/signup.php" class="btn-rev-light">Start investing with £1 <i class="fas fa-arrow-right ms-2"></i></a>
                 </div>
             </div>
             
-            <!-- Professional Orbital Bag of Cryptos -->
-            <div class="ui-interactive mock-crypto c-btc target-3d"><i class="fab fa-bitcoin"></i></div>
-            <div class="ui-interactive mock-crypto c-eth target-3d"><i class="fab fa-ethereum"></i></div>
-            <div class="ui-interactive mock-crypto c-usdt target-3d-slow" style="font-size: 1.1rem;">USDT</div>
-            <div class="ui-interactive mock-crypto c-sol target-3d" style="font-size: 1.4rem;">SOL</div>
-            <div class="ui-interactive mock-crypto c-ada target-3d-slow" style="font-size: 1.4rem;">ADA</div>
-            <div class="ui-interactive mock-crypto c-doge target-3d" style="font-size: 1.6rem;">Ð</div>
-            <div class="ui-interactive mock-crypto c-shib target-3d-slow" style="font-size: 0.8rem;">SHIB</div>
+            <!-- Professional Orbital Bag of Cryptos — real logos -->
+            <div class="ui-interactive mock-crypto c-btc target-3d">
+                <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/btc.png" alt="Bitcoin" style="width:44px;height:44px;object-fit:contain;">
+            </div>
+            <div class="ui-interactive mock-crypto c-eth target-3d">
+                <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/eth.png" alt="Ethereum" style="width:44px;height:44px;object-fit:contain;">
+            </div>
+            <div class="ui-interactive mock-crypto c-usdt target-3d-slow">
+                <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/usdt.png" alt="Tether" style="width:38px;height:38px;object-fit:contain;">
+            </div>
+            <div class="ui-interactive mock-crypto c-sol target-3d">
+                <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/sol.png" alt="Solana" style="width:42px;height:42px;object-fit:contain;">
+            </div>
+            <div class="ui-interactive mock-crypto c-ada target-3d-slow">
+                <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/ada.png" alt="Cardano" style="width:38px;height:38px;object-fit:contain;">
+            </div>
+            <div class="ui-interactive mock-crypto c-doge target-3d">
+                <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/doge.png" alt="Dogecoin" style="width:36px;height:36px;object-fit:contain;">
+            </div>
+            <div class="ui-interactive mock-crypto c-shib target-3d-slow">
+                <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/bnb.png" alt="BNB" style="width:34px;height:34px;object-fit:contain;">
+            </div>
         </section>
 
-    </main>
 
-
-
-    <!-- Revolut-style Footer CTA -->
-    <section class="padding-section text-center reveal" style="background: var(--r-white); border-top: 1px solid var(--r-gray-200);">
-        <h2 class="headline-super mb-4">Join 1M+ users.</h2>
-        <div class="d-flex justify-content-center gap-3">
-            <a href="user/index.php" class="btn-rev" style="padding: 1.2rem 3rem; font-size: 1.2rem;">Sign up in minutes</a>
+    <!-- CTA — tight editorial, two lines of content only -->
+    <section class="reveal" style="padding: 3rem 0 5rem;">
+        <div class="presentation-wrap">
+            <div class="cta-terminal" style="padding: 4rem 4.5rem;">
+                <div style="position: relative; z-index: 2; max-width: 600px; margin: 0 auto; text-align: center;">
+                    <h2 style="font-size: clamp(2rem, 5vw, 3.8rem); font-weight: 900; letter-spacing: -2px; color: #fff; line-height: 1.05; margin-bottom: 1.25rem;">
+                        One account.<br>Every financial tool you need.
+                    </h2>
+                    <p style="font-size: 1rem; color: rgba(255,255,255,0.45); font-weight: 500; margin-bottom: 2.5rem; line-height: 1.65;">
+                        Banking, crypto, FX, and cards — open free in under 2 minutes.
+                    </p>
+                    <a href="auth/signup.php" class="btn-rev" style="padding: 1rem 2.8rem; font-size: 1rem; display: inline-flex; align-items: center; gap: 10px;">
+                        Open a free account <i class="fas fa-arrow-right"></i>
+                    </a>
+                    <div style="margin-top: 2rem; display: flex; align-items: center; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.28); font-weight: 600; display:flex; align-items:center; gap:7px;"><i class="fas fa-shield-halved" style="color:var(--brand-accent);"></i> FCA Authorised</span>
+                        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.28); font-weight: 600; display:flex; align-items:center; gap:7px;"><i class="fas fa-lock" style="color:rgba(255,255,255,0.4);"></i> Bank-grade security</span>
+                        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.28); font-weight: 600;">No credit card required</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- Very clean Footer -->
-    <footer style="background: var(--r-gray-100); padding: 5rem 0 3rem; border-top: 1px solid var(--r-gray-300);">
+    <!-- Light Footer -->
+    <footer class="footer-dark">
         <div class="presentation-wrap">
-            <div class="row mb-5">
-                <div class="col-lg-3">
-                    <a href="index.php" class="nav-logo">finpay</a>
+
+            <!-- Top: Brand + Links grid -->
+            <div class="footer-grid-cols" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 4rem; padding-bottom: 4rem;">
+
+                <!-- Brand -->
+                <div class="footer-brand-col">
+                    <a href="index.php" class="nav-logo" style="color: var(--r-dark); display: inline-flex; margin-bottom: 1.5rem;"><div class="nav-logo-dot"></div>finpay</a>
+                    <p style="font-size: 0.875rem; color: var(--r-gray-text); font-weight: 500; line-height: 1.8; max-width: 280px; margin-bottom: 2rem;">The financial super app for the modern world. Banking, crypto, FX, and cards &mdash; all in one account, free to open in 2 minutes.</p>
+                    <!-- Social icons -->
+                    <div class="d-flex gap-2">
+                        <a href="#" style="width:38px;height:38px;border-radius:12px;background:var(--r-gray-100);border:1px solid var(--r-gray-200);display:flex;align-items:center;justify-content:center;color:var(--r-gray-text);text-decoration:none;transition:all 0.2s;" onmouseover="this.style.background='#e5e7eb';this.style.color='#111'" onmouseout="this.style.background='var(--r-gray-100)';this.style.color='var(--r-gray-text)'">
+                            <i class="fab fa-x-twitter" style="font-size:0.85rem;"></i>
+                        </a>
+                        <a href="#" style="width:38px;height:38px;border-radius:12px;background:var(--r-gray-100);border:1px solid var(--r-gray-200);display:flex;align-items:center;justify-content:center;color:var(--r-gray-text);text-decoration:none;transition:all 0.2s;" onmouseover="this.style.background='#e5e7eb';this.style.color='#111'" onmouseout="this.style.background='var(--r-gray-100)';this.style.color='var(--r-gray-text)'">
+                            <i class="fab fa-linkedin-in" style="font-size:0.85rem;"></i>
+                        </a>
+                        <a href="#" style="width:38px;height:38px;border-radius:12px;background:var(--r-gray-100);border:1px solid var(--r-gray-200);display:flex;align-items:center;justify-content:center;color:var(--r-gray-text);text-decoration:none;transition:all 0.2s;" onmouseover="this.style.background='#e5e7eb';this.style.color='#111'" onmouseout="this.style.background='var(--r-gray-100)';this.style.color='var(--r-gray-text)'">
+                            <i class="fab fa-instagram" style="font-size:0.85rem;"></i>
+                        </a>
+                    </div>
                 </div>
-                <div class="col-lg-2 col-6">
-                    <div style="font-weight: 800; margin-bottom: 1.5rem;">Services</div>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><a href="#" style="color: var(--r-gray-text); text-decoration: none; font-weight: 600;">Transfers</a></li>
-                        <li class="mb-2"><a href="#" style="color: var(--r-gray-text); text-decoration: none; font-weight: 600;">Cards</a></li>
-                        <li class="mb-2"><a href="#" style="color: var(--r-gray-text); text-decoration: none; font-weight: 600;">Crypto</a></li>
-                    </ul>
+
+                <!-- Product -->
+                <div>
+                    <div class="footer-col-head">Product</div>
+                    <a href="#features" class="footer-link">Transfers</a>
+                    <a href="#cards" class="footer-link">Cards</a>
+                    <a href="#crypto" class="footer-link">Crypto</a>
+                    <a href="#wealth" class="footer-link">Analytics</a>
+                    <a href="auth/signup.php" class="footer-link">Open account</a>
                 </div>
-                <div class="col-lg-2 col-6">
-                    <div style="font-weight: 800; margin-bottom: 1.5rem;">Company</div>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><a href="#" style="color: var(--r-gray-text); text-decoration: none; font-weight: 600;">About</a></li>
-                        <li class="mb-2"><a href="#" style="color: var(--r-gray-text); text-decoration: none; font-weight: 600;">Careers</a></li>
-                        <li class="mb-2"><a href="#" style="color: var(--r-gray-text); text-decoration: none; font-weight: 600;">Legal</a></li>
-                    </ul>
+
+                <!-- Company -->
+                <div>
+                    <div class="footer-col-head">Company</div>
+                    <a href="#" class="footer-link">About us</a>
+                    <a href="#" class="footer-link">Careers</a>
+                    <a href="#" class="footer-link">Newsroom</a>
+                    <a href="#" class="footer-link">Blog</a>
+                    <a href="#" class="footer-link">Contact</a>
+                </div>
+
+                <!-- Legal -->
+                <div>
+                    <div class="footer-col-head">Legal</div>
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                    <a href="#" class="footer-link">Terms of Service</a>
+                    <a href="#" class="footer-link">Cookie Policy</a>
+                    <a href="#" class="footer-link">Accessibility</a>
+                    <a href="#" class="footer-link">Security</a>
+                </div>
+
+            </div>
+
+            <!-- Regulatory bar -->
+            <div style="border-top: 1px solid var(--r-gray-200); padding: 1.5rem 0;">
+                <div class="footer-reg-badge mb-3"><i class="fas fa-shield-halved"></i> FCA Authorised &amp; Regulated &bull; Firm Reference: 987654</div>
+                <p style="font-size: 0.73rem; color: #9ca3af; line-height: 1.9; max-width: 900px; margin: 0;">
+                    FinPay is a financial technology company, not a bank. Banking services are provided by licensed banking partners. The FinPay Card is issued pursuant to licence by Visa/Mastercard International. Cryptocurrency products and services are offered by FinPay Digital Assets Ltd and involve significant risk, including the risk of total loss. Past performance is not indicative of future results. Investments may go up as well as down. FinPay is registered in England &amp; Wales. Registered office: 25 Canary Wharf, London E14 5AB.
+                </p>
+            </div>
+
+            <!-- Bottom copyright bar -->
+            <div class="footer-bottom">
+                <div style="font-size: 0.78rem; color: #9ca3af; font-weight: 600;">
+                    &copy; <?php echo date('Y'); ?> FinPay Inc. All rights reserved.
+                </div>
+                <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+                    <a href="#" class="footer-link" style="margin:0;">Privacy</a>
+                    <a href="#" class="footer-link" style="margin:0;">Terms</a>
+                    <a href="#" class="footer-link" style="margin:0;">Cookies</a>
+                    <a href="#" class="footer-link" style="margin:0;">Sitemap</a>
                 </div>
             </div>
-            <div style="font-size: 0.8rem; color: #a1a1aa; border-top: 1px solid var(--r-gray-300); padding-top: 2rem;">
-                FinPay is a financial technology company, not a bank. The FinPay Card is issued by Partner Banks. Cryptocurrency services are provided by FinPay Digital Assets LLC. Investing involves risk. <br><br>
-                &copy; <?php echo date('Y'); ?> FinPay Inc. All rights reserved.
-            </div>
+
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            
+            // ── Enhanced Multi-layer Parallax ──
+            const mesh       = document.querySelector('.global-mesh');
+            const heroText   = document.querySelector('.pt-hero');
+            const statStrip  = document.querySelector('.reveal[style*="padding: 4rem"]');
+            const photoBlock = document.querySelector('.p-block-dark.mb-4');
+            const pBlocks    = document.querySelectorAll('.p-block:not(.p-block-dark)'); // light feature cards
+            const cryptoSection = document.getElementById('crypto');
+
+            let ticking = false;
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        const s = window.scrollY;
+
+                        // Mesh moves down at 40% scroll speed (parallax depth)
+                        if (mesh) mesh.style.transform = `translateY(${s * 0.4}px)`;
+
+                        // Hero text floats up slowly and fades
+                        if (heroText && s < 800) {
+                            heroText.style.transform = `translateY(${s * -0.1}px)`;
+                            heroText.style.opacity   = Math.max(0, 1 - (s / 500));
+                        }
+
+                        // Stat strip floats up gently
+                        if (statStrip) {
+                            const offset = statStrip.getBoundingClientRect().top + s;
+                            const rel    = s - offset + window.innerHeight;
+                            if (rel > 0) statStrip.style.transform = `translateY(${rel * -0.04}px)`;
+                        }
+
+                        // Photo block has its own subtle translate
+                        if (photoBlock) {
+                            const rect = photoBlock.getBoundingClientRect();
+                            const mid  = rect.top + rect.height / 2 - window.innerHeight / 2;
+                            photoBlock.querySelector('img').style.transform = `translateY(${mid * 0.06}px) scale(1.04)`;
+                        }
+
+                        // Feature cards each offset at a slightly different rate
+                        pBlocks.forEach((b, i) => {
+                            const rect = b.getBoundingClientRect();
+                            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                                const mid = rect.top + rect.height / 2 - window.innerHeight / 2;
+                                const factor = i % 2 === 0 ? 0.025 : 0.04;
+                                b.style.transform = `translateY(${mid * -factor}px)`;
+                            }
+                        });
+
+                        // Crypto section: coins drift independently at different speeds
+                        if (cryptoSection) {
+                            const cRect  = cryptoSection.getBoundingClientRect();
+                            if (cRect.top < window.innerHeight && cRect.bottom > 0) {
+                                const progress = (window.innerHeight - cRect.top) / (window.innerHeight + cRect.height);
+                                const coins = cryptoSection.querySelectorAll('.mock-crypto');
+                                coins.forEach((c, idx) => {
+                                    const drift = (progress - 0.5) * (idx % 2 === 0 ? 40 : -30);
+                                    const existingRot = getComputedStyle(c).getPropertyValue('--base-rot') || '0deg';
+                                    c.style.transform = `translateY(${drift}px) rotate(${existingRot}) scale(${c.classList.contains('c-btc') ? 1.3 : 1})`;
+                                });
+                            }
+                        }
+
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            });
+
             // 1. Initial CSS Object Intersection Animations (Fades only, no numbers)
             const observer = new IntersectionObserver((entries, obs) => {
                 entries.forEach(entry => {

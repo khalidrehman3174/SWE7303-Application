@@ -1,4 +1,11 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../auth/login.php");
+    exit;
+}
 if(!isset($pageTitle)) $pageTitle = 'FinPay Pro';
 ?>
 <!DOCTYPE html>
@@ -12,14 +19,20 @@ if(!isset($pageTitle)) $pageTitle = 'FinPay Pro';
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
+        /* ===== CENTRAL BRAND DESIGN SYSTEM (User App) =====
+         * Mirrors homepage --brand-accent: #10b981 (emerald green)
+         * Background uses soft neutral to match homepage white body.
+         * ====================================================== */
         :root {
+            --brand-accent:       #10b981;
+            --brand-accent-glow:  rgba(16,185,129,0.15);
             --bg-body: #f4f5f7;
             --bg-surface: #ffffff;
             --bg-surface-light: #f9fafb;
             --text-primary: #111827;
             --text-secondary: #6b7280;
-            --accent: #00d26a; 
-            --accent-glow: rgba(0, 210, 106, 0.15);
+            --accent: #10b981;
+            --accent-glow: rgba(16,185,129,0.12);
             --border-light: rgba(0, 0, 0, 0.08);
             --sidebar-width: 280px;
             --glass-grad: linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%);
@@ -43,8 +56,8 @@ if(!isset($pageTitle)) $pageTitle = 'FinPay Pro';
                 --bg-surface-light: #1a1a20;
                 --text-primary: #ffffff;
                 --text-secondary: #8a8d93;
-                --accent: #00d26a; 
-                --accent-glow: rgba(0, 210, 106, 0.2);
+                --accent: #10b981;
+                --accent-glow: rgba(16, 185, 129, 0.2);
                 --border-light: rgba(255, 255, 255, 0.08);
                 --glass-grad: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
                 --sidebar-bg: rgba(16, 16, 20, 0.6);
@@ -61,13 +74,14 @@ if(!isset($pageTitle)) $pageTitle = 'FinPay Pro';
             }
         }
 
-        body { background-color: var(--bg-body); color: var(--text-primary); font-family: 'Outfit', sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; overflow-x: hidden; background-image: radial-gradient(circle at 50% 0%, var(--accent-glow), transparent 50%); }
+        /* Body: same subtle green glow as homepage — unified brand feel */
+        body { background-color: var(--bg-body); color: var(--text-primary); font-family: 'Outfit', sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; overflow-x: hidden; background-image: radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.07) 0%, transparent 55%), radial-gradient(ellipse at 90% 0%, rgba(16,185,129,0.04) 0%, transparent 45%); }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-body); }
         ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 10px; }
 
         .glass-panel { background: var(--glass-grad); backdrop-filter: blur(20px); border: 1px solid var(--border-light); border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .sidebar { display: none; width: var(--sidebar-width); background: var(--sidebar-bg); backdrop-filter: blur(20px); border-right: 1px solid var(--border-light); flex-direction: column; position: fixed; height: 100vh; left: 0; top: 0; z-index: 100; }
+        .sidebar { display: none; width: var(--sidebar-width); background: var(--sidebar-bg); backdrop-filter: blur(20px); border-right: 1px solid var(--border-light); flex-direction: column; position: fixed; height: 100vh; left: 0; top: 0; z-index: 100; overflow-y: auto; }
         .brand { padding: 2.5rem 2rem; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px; }
         .brand-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #00b35a); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px var(--accent-glow); }
         .sidebar-menu { list-style: none; padding: 0 1rem; margin: 0; flex: 1; }
