@@ -1,4 +1,8 @@
 {
+    "name": "finpay/application",
+    "description": "FinPay web application backend and frontend codebase.",
+    "type": "project",
+    "license": "proprietary",
     "require-dev": {
         "phpunit/phpunit": "^11.5"
     },
