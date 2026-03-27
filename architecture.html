@@ -62,6 +62,101 @@
             display: flex;
             justify-content: center;
         }
+
+        .section-card {
+            margin: 2rem auto;
+            max-width: 1200px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .section-card h2,
+        .section-card h3 {
+            color: #e9f8ef;
+        }
+
+        .section-card p,
+        .section-card li {
+            color: #c8d1db;
+        }
+
+        .accent-note {
+            background: rgba(0, 210, 106, 0.08);
+            border-left: 3px solid var(--accent);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            margin: 1rem 0;
+            color: #d7ffe8;
+        }
+
+        .subtle-note {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            margin: 0.8rem 0;
+        }
+
+        .diagram-block {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            overflow-x: auto;
+        }
+
+        .state-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.8rem;
+        }
+
+        .state-table th,
+        .state-table td {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.7rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .state-table th {
+            background: rgba(0, 210, 106, 0.1);
+            color: #deffeb;
+        }
+
+        .state-chip {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            color: #e8fff2;
+            background: rgba(0, 210, 106, 0.2);
+            border: 1px solid rgba(0, 210, 106, 0.45);
+        }
+
+        .api-list code {
+            color: #8ef2bc;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 0;
+            }
+
+            .diagram-container,
+            .section-card {
+                padding: 1rem;
+                border-radius: 12px;
+            }
+
+            .state-table th,
+            .state-table td {
+                font-size: 0.92rem;
+            }
+        }
         
     </style>
 </head>
@@ -136,6 +231,173 @@
                     class AdminDash,Admin admin;
             </div>
         </div>
+
+        <section id="deposit-architecture" class="section-card">
+            <h2><i class="fas fa-money-bill-transfer text-success me-2"></i>Deposit Architecture (Sandbox)</h2>
+            <p>
+                This section is additive and focuses only on deposit design for sandbox implementation.
+                The recommended primary API is <strong>Stripe Test Mode</strong> because it offers the fastest end-to-end testing path with payment intents,
+                webhook simulation, idempotency support, and unified handling for card plus wallet rails.
+            </p>
+
+            <div class="accent-note">
+                <strong>Sandbox API Recommendation:</strong> Start with Stripe Test Mode as the default provider for deposit execution.
+                Keep Open Banking and Crypto flows as adapters behind the same Deposit API contract.
+            </div>
+
+            <h3>Component Architecture</h3>
+            <div class="diagram-block">
+                <div class="mermaid">
+                    graph LR
+                        U[User Deposit UI]
+                        FE[FinPay Frontend\nDeposit Form]
+                        API[Deposit API\n/api/deposits/create]
+                        ORCH[Deposit Orchestrator]
+                        STRIPE[Stripe Sandbox\nPayment Intents]
+                        WH[Webhook Receiver\n/api/webhooks/stripe]
+                        IDEMP[Idempotency Guard]
+                        DEP[(deposits)]
+                        WAL[(wallets)]
+                        TX[(transactions)]
+                        ADM[Admin Monitor]
+
+                        U --> FE
+                        FE --> API
+                        API --> ORCH
+                        ORCH --> STRIPE
+                        STRIPE --> WH
+                        WH --> IDEMP
+                        IDEMP --> DEP
+                        IDEMP --> WAL
+                        IDEMP --> TX
+                        ADM -. inspect .-> DEP
+                        ADM -. reconcile .-> TX
+
+                        classDef ext fill:#2b1f44,stroke:#9f7aea,stroke-width:2px,color:#fff
+                        classDef core fill:#14322a,stroke:#00d26a,stroke-width:2px,color:#fff
+                        classDef data fill:#10213a,stroke:#4f9cff,stroke-width:2px,color:#fff
+
+                        class STRIPE,WH ext
+                        class FE,API,ORCH,IDEMP core
+                        class DEP,WAL,TX data
+                </div>
+            </div>
+
+            <h3>Stripe Sandbox Sequence</h3>
+            <div class="diagram-block">
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant User
+                        participant Frontend as FinPay Frontend
+                        participant API as Deposit API
+                        participant Stripe as Stripe Sandbox
+                        participant Webhook as Webhook Receiver
+                        participant Ledger as Ledger Services
+
+                        User->>Frontend: Submit deposit amount + method
+                        Frontend->>API: POST /api/deposits/create
+                        API->>API: Create deposit (status: initiated)
+                        API->>Stripe: Create PaymentIntent (test mode)
+                        Stripe-->>Frontend: client_secret
+                        Frontend->>Stripe: Confirm payment
+                        Stripe-->>Webhook: payment_intent.succeeded
+                        Webhook->>Ledger: Verify signature + idempotency key
+                        Ledger->>Ledger: Update deposits to completed
+                        Ledger->>Ledger: Credit wallets balance
+                        Ledger->>Ledger: Insert transactions audit row
+                        Frontend->>API: GET /api/deposits/status/{depositId}
+                        API-->>Frontend: completed
+                </div>
+            </div>
+
+            <h3>Sandbox Deposit API Contract</h3>
+            <div class="subtle-note api-list">
+                <ul>
+                    <li><code>POST /api/deposits/create</code>: Create deposit intent and return provider payload (<code>client_secret</code> or redirect URL).</li>
+                    <li><code>GET /api/deposits/status/{depositId}</code>: Return current status for polling UI updates.</li>
+                    <li><code>POST /api/webhooks/stripe</code>: Receive provider events and perform idempotent settlement.</li>
+                    <li><code>POST /api/deposits/retry/{depositId}</code>: Retry a failed or expired sandbox attempt.</li>
+                </ul>
+            </div>
+
+            <h3>Deposit State Model</h3>
+            <table class="state-table" aria-label="Deposit states and transitions">
+                <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>Who sets it</th>
+                        <th>Transition trigger</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="state-chip">initiated</span></td>
+                        <td>Deposit API</td>
+                        <td>Deposit request accepted</td>
+                        <td>Deposit row created with immutable deposit_id.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="state-chip">pending_provider</span></td>
+                        <td>Deposit Orchestrator</td>
+                        <td>Payment intent or redirect created</td>
+                        <td>Waiting for provider-side completion.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="state-chip">pending_webhook</span></td>
+                        <td>Provider callback flow</td>
+                        <td>User finished provider confirmation</td>
+                        <td>UI may still poll until webhook settles.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="state-chip">completed</span></td>
+                        <td>Webhook settlement</td>
+                        <td>Verified success event + idempotency pass</td>
+                        <td>Wallet credited and transaction audit inserted.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="state-chip">failed</span></td>
+                        <td>Provider or API</td>
+                        <td>Provider decline or validation error</td>
+                        <td>No wallet credit; retry endpoint available.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="state-chip">expired</span></td>
+                        <td>Scheduler/API</td>
+                        <td>Intent timeout exceeded</td>
+                        <td>User can start a fresh deposit intent.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="state-chip">reversed</span></td>
+                        <td>Admin/System</td>
+                        <td>Dispute, refund, or correction</td>
+                        <td>Requires compensating transaction record.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Future Adapters (No Core Redesign Needed)</h3>
+            <div class="subtle-note">
+                <p>
+                    Open Banking and Crypto can be added as provider adapters behind the same deposit contract.
+                    They should emit the same status transitions and settlement events so frontend and ledger behavior remain stable.
+                </p>
+                <ul>
+                    <li>Open Banking adapter: exchange consent token, monitor transfer completion, emit settlement event.</li>
+                    <li>Crypto adapter: generate deposit address, track confirmations, emit settlement once confirmation threshold is met.</li>
+                    <li>Both adapters must honor idempotency key and wallet credit invariants.</li>
+                </ul>
+            </div>
+
+            <h3>Non-goals for This Page Update</h3>
+            <div class="subtle-note">
+                <ul>
+                    <li>No backend PHP implementation is added in this change.</li>
+                    <li>No database migration is executed in this change.</li>
+                    <li>No compliance gate (KYC/AML) is modeled in this sandbox-first section.</li>
+                </ul>
+            </div>
+        </section>
     </main>
 
     <!-- Mermaid Initialization -->

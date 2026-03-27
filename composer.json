@@ -1,5 +1,8 @@
 {
     "require-dev": {
         "phpunit/phpunit": "^11.5"
+    },
+    "require": {
+        "stripe/stripe-php": "^16.0"
     }
 }

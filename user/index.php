@@ -1,6 +1,8 @@
 <?php
 $pageTitle = 'FinPay Pro - Dashboard';
 $activePage = 'dashboard';
+require_once __DIR__ . '/../api/v1/lib/config.php';
+$apiConfig = api_config();
 require_once 'templates/head.php';
 ?>
 
@@ -343,7 +345,8 @@ require_once 'templates/head.php';
             </div>
 
             <div class="mt-auto w-100" style="padding-bottom: 2rem;">
-                <button class="btn-pro btn-pro-primary w-100" onclick="proceedDeposit()" style="padding: 16px; border-radius: 100px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 25px rgba(239, 184, 12, 0.25);">Continue to Deposit</button>
+                <button id="depositContinueBtn" class="btn-pro btn-pro-primary w-100" onclick="proceedDeposit()" style="padding: 16px; border-radius: 100px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 25px rgba(239, 184, 12, 0.25);">Continue to Deposit</button>
+                <div id="depositFeedback" class="text-center mt-2" style="font-size: 0.82rem; color: var(--text-secondary);"></div>
                 <div class="text-center mt-3">
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0; opacity: 0.8;"><i class="fas fa-lock text-success me-1"></i> Funds protected by FinPay Shield.</p>
                 </div>
@@ -372,27 +375,19 @@ require_once 'templates/head.php';
             </div>
 
             <div class="swap-input-box mb-4" style="background: var(--bg-surface-light); border: 2px solid transparent; border-radius: 20px; padding: 1.5rem;">
-                <div class="mb-3">
-                    <label style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 5px;">Card Number</label>
-                    <div style="display: flex; align-items: center; background: var(--bg-body); border-radius: 12px; padding: 12px 15px; border: 1px solid var(--border-light);">
-                        <i class="far fa-credit-card text-secondary me-3" style="font-size: 1.2rem;"></i>
-                        <input type="text" placeholder="0000 0000 0000 0000" style="background: transparent; border: none; color: var(--text-primary); width: 100%; outline: none; font-size: 1.05rem; letter-spacing: 1px; font-family: 'Outfit', monospace;">
-                    </div>
+                <div class="mb-2">
+                    <label style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 5px;">Card Details</label>
+                    <div id="cardElement" style="background: var(--bg-body); border: 1px solid var(--border-light); border-radius: 12px; padding: 14px 15px;"></div>
                 </div>
-                <div class="d-flex gap-3 mb-2">
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 5px;">Expiry</label>
-                        <input type="text" placeholder="MM/YY" style="background: var(--bg-body); border: 1px solid var(--border-light); border-radius: 12px; padding: 12px 15px; color: var(--text-primary); width: 100%; outline: none; font-size: 1.05rem; text-align: center;">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 5px;">CVC</label>
-                        <input type="text" placeholder="123" style="background: var(--bg-body); border: 1px solid var(--border-light); border-radius: 12px; padding: 12px 15px; color: var(--text-primary); width: 100%; outline: none; font-size: 1.05rem; text-align: center;">
-                    </div>
+                <div id="cardElementError" style="font-size: 0.8rem; color: #ef4444; min-height: 18px;"></div>
+                <div class="mt-3" style="font-size: 0.78rem; color: var(--text-secondary);">
+                    Secure sandbox payment powered by Stripe Elements.
                 </div>
             </div>
 
             <div class="mt-auto w-100" style="padding-bottom: 2rem;">
-                <button class="btn-pro btn-pro-primary w-100" data-bs-dismiss="offcanvas" onclick="alert('Demo: Card payment successfully processed!')" style="padding: 16px; border-radius: 100px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 25px rgba(239, 184, 12, 0.25);">Pay Securely</button>
+                <button id="cardPayBtn" class="btn-pro btn-pro-primary w-100" onclick="submitCardDeposit()" style="padding: 16px; border-radius: 100px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 25px rgba(239, 184, 12, 0.25);">Pay Securely</button>
+                <div id="cardDepositFeedback" class="text-center mt-2" style="font-size: 0.82rem; color: var(--text-secondary);"></div>
             </div>
 
         </div>
@@ -414,10 +409,116 @@ require_once 'templates/head.php';
 
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
 
     <script>
+        const STRIPE_PUBLISHABLE_KEY = '<?php echo htmlspecialchars($apiConfig['stripe_publishable_key'] ?? '', ENT_QUOTES); ?>';
+        const API_BASE_URL = window.FINPAY_API_BASE_URL || '../api/v1';
         let selectedMethod = 'bank';
-        
+        let activeCardDepositId = null;
+        let activeCardClientSecret = null;
+        let activeCardProviderMode = 'mock';
+        let stripe = null;
+        let stripeElements = null;
+        let cardElement = null;
+
+        function setFeedback(id, message, isError = false) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = message;
+            el.style.color = isError ? '#ef4444' : 'var(--text-secondary)';
+        }
+
+        async function apiCall(path, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            if (body !== null) {
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(`${API_BASE_URL}${path}`, options);
+            const raw = await response.text();
+            let payload = null;
+
+            try {
+                payload = JSON.parse(raw);
+            } catch (e) {
+                const brief = raw.length > 240 ? `${raw.slice(0, 240)}...` : raw;
+                throw new Error(`API returned non-JSON response. ${brief}`);
+            }
+
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.message || 'Request failed');
+            }
+            return payload;
+        }
+
+        function initializeStripeElements() {
+            if (!STRIPE_PUBLISHABLE_KEY || typeof window.Stripe === 'undefined') {
+                return false;
+            }
+
+            if (!stripe) {
+                stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
+            }
+
+            if (!stripe) {
+                return false;
+            }
+
+            if (!stripeElements) {
+                stripeElements = stripe.elements();
+            }
+
+            if (!cardElement) {
+                cardElement = stripeElements.create('card', {
+                    style: {
+                        base: {
+                            color: '#111827',
+                            fontFamily: 'Outfit, sans-serif',
+                            fontSize: '16px',
+                            '::placeholder': { color: '#9ca3af' }
+                        },
+                        invalid: {
+                            color: '#ef4444'
+                        }
+                    }
+                });
+
+                cardElement.mount('#cardElement');
+                cardElement.on('change', function(event) {
+                    const errEl = document.getElementById('cardElementError');
+                    errEl.textContent = event.error ? event.error.message : '';
+                });
+            }
+
+            return true;
+        }
+
+        async function pollDepositStatus(depositId, maxAttempts = 20, intervalMs = 1500) {
+            for (let i = 0; i < maxAttempts; i += 1) {
+                const result = await apiCall(`/deposits/status.php?deposit_id=${encodeURIComponent(depositId)}`, 'GET');
+                const status = (result.data.deposit.status || '').toLowerCase();
+
+                if (status === 'completed') {
+                    return result.data.deposit;
+                }
+
+                if (status === 'failed' || status === 'expired' || status === 'reversed') {
+                    throw new Error(`Deposit ended with status: ${status}`);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, intervalMs));
+            }
+
+            throw new Error('Timed out waiting for deposit settlement.');
+        }
+
         function selectPaymentMethod(element, method) {
             selectedMethod = method;
             document.querySelectorAll('.payment-method-card').forEach(card => {
@@ -431,35 +532,119 @@ require_once 'templates/head.php';
         }
 
         function updateDepositButton() {
-            // Placeholder for real-time validation logic if needed
+            const amount = parseFloat(document.getElementById('depositAmount').value || '0');
+            const btn = document.getElementById('depositContinueBtn');
+            if (btn) {
+                btn.disabled = amount <= 0;
+                btn.style.opacity = amount <= 0 ? '0.65' : '1';
+            }
         }
 
-        function proceedDeposit() {
-            let amount = document.getElementById('depositAmount').value || 0;
-            
-            // Hide current select modal
-            let addMoneyModalEl = document.getElementById('addMoneyModal');
-            let addMoneyModal = bootstrap.Offcanvas.getInstance(addMoneyModalEl);
-            if(addMoneyModal) addMoneyModal.hide();
+        async function proceedDeposit() {
+            const amount = parseFloat(document.getElementById('depositAmount').value || '0');
+            if (!amount || amount <= 0) {
+                setFeedback('depositFeedback', 'Enter a valid amount.', true);
+                return;
+            }
 
-            setTimeout(() => {
-                if(selectedMethod === 'bank') {
-                    // Open GBP Local Account Details so they can direct-transfer
-                    let modal = new bootstrap.Offcanvas(document.getElementById('accountDetailsModal'));
-                    modal.show();
-                } else if(selectedMethod === 'card') {
-                    // Pass dynamic amount and open secure Card Input Offcanvas
-                    document.getElementById('cardDepositAmountDisplay').innerText = amount;
-                    let modal = new bootstrap.Offcanvas(document.getElementById('cardDepositModal'));
-                    modal.show();
-                } else if(selectedMethod === 'apple') {
-                    // Pass dynamic amount and launch simulated Native Apple Pay interface
-                    document.getElementById('applePayAmountDisplay').innerText = amount;
-                    let modal = new bootstrap.Modal(document.getElementById('applePayModal'));
-                    modal.show();
+            setFeedback('depositFeedback', 'Creating deposit...');
+
+            try {
+                const result = await apiCall('/deposits/create.php', 'POST', {
+                    amount,
+                    method: selectedMethod
+                });
+
+                const deposit = result.data.deposit;
+
+                const addMoneyModalEl = document.getElementById('addMoneyModal');
+                const addMoneyModal = bootstrap.Offcanvas.getInstance(addMoneyModalEl);
+                if (addMoneyModal) addMoneyModal.hide();
+
+                setTimeout(() => {
+                    if (selectedMethod === 'bank') {
+                        setFeedback('depositFeedback', `Deposit created: ${deposit.deposit_id}. Use your bank details to complete transfer.`);
+                        const modal = new bootstrap.Offcanvas(document.getElementById('accountDetailsModal'));
+                        modal.show();
+                    } else if (selectedMethod === 'card') {
+                        activeCardDepositId = deposit.deposit_id;
+                        activeCardClientSecret = result.data.provider ? result.data.provider.client_secret : null;
+                        activeCardProviderMode = result.data.provider ? (result.data.provider.mode || 'mock') : 'mock';
+                        document.getElementById('cardDepositAmountDisplay').innerText = amount;
+                        if (activeCardProviderMode === 'stripe') {
+                            const initialized = initializeStripeElements();
+                            if (!initialized) {
+                                throw new Error('Stripe publishable key is missing or invalid.');
+                            }
+                            setFeedback('cardDepositFeedback', `Deposit ${deposit.deposit_id} is ready. Confirm card payment.`);
+                        } else {
+                            setFeedback('cardDepositFeedback', `Mock mode: Deposit ${deposit.deposit_id} is ready. Click Pay Securely to complete sandbox settlement.`);
+                        }
+                        const modal = new bootstrap.Offcanvas(document.getElementById('cardDepositModal'));
+                        modal.show();
+                    } else if (selectedMethod === 'apple') {
+                        document.getElementById('applePayAmountDisplay').innerText = amount;
+                        setFeedback('depositFeedback', `Deposit completed: ${deposit.deposit_id}`);
+                        const modal = new bootstrap.Modal(document.getElementById('applePayModal'));
+                        modal.show();
+                    }
+                }, 300);
+            } catch (err) {
+                setFeedback('depositFeedback', err.message || 'Deposit failed.', true);
+            }
+        }
+
+        async function submitCardDeposit() {
+            if (!activeCardDepositId) {
+                setFeedback('cardDepositFeedback', 'No active card deposit found.', true);
+                return;
+            }
+
+            const payBtn = document.getElementById('cardPayBtn');
+            payBtn.disabled = true;
+            payBtn.textContent = 'Processing...';
+            setFeedback('cardDepositFeedback', 'Confirming card deposit...');
+
+            try {
+                if (activeCardProviderMode === 'stripe') {
+                    if (!stripe || !cardElement || !activeCardClientSecret) {
+                        throw new Error('Stripe payment is not initialized.');
+                    }
+
+                    const confirmation = await stripe.confirmCardPayment(activeCardClientSecret, {
+                        payment_method: {
+                            card: cardElement
+                        }
+                    });
+
+                    if (confirmation.error) {
+                        throw new Error(confirmation.error.message || 'Card confirmation failed.');
+                    }
+
+                    setFeedback('cardDepositFeedback', 'Payment confirmed. Waiting for webhook settlement...');
+                    await pollDepositStatus(activeCardDepositId);
+                } else {
+                    await apiCall('/deposits/confirm.php', 'POST', {
+                        deposit_id: activeCardDepositId
+                    });
                 }
-            }, 350); // Small timeout to allow previous offcanvas to slide out smoothly
+
+                setFeedback('cardDepositFeedback', `Deposit ${activeCardDepositId} completed.`);
+
+                const cardModalEl = document.getElementById('cardDepositModal');
+                const cardModal = bootstrap.Offcanvas.getInstance(cardModalEl);
+                if (cardModal) {
+                    setTimeout(() => cardModal.hide(), 500);
+                }
+            } catch (err) {
+                setFeedback('cardDepositFeedback', err.message || 'Could not confirm card payment.', true);
+            } finally {
+                payBtn.disabled = false;
+                payBtn.textContent = 'Pay Securely';
+            }
         }
+
+        updateDepositButton();
     </script>
 </body>
 </html>
