@@ -1,8 +1,220 @@
 <?php
 $pageTitle = 'FinPay Pro - Dashboard';
 $activePage = 'dashboard';
+require_once __DIR__ . '/../includes/init.php';
 require_once __DIR__ . '/../api/v1/lib/config.php';
 $apiConfig = api_config();
+
+$recentActivities = [];
+$allActivities = [];
+
+if (isset($dbc, $_SESSION['user_id'])) {
+    $safeUserId = (int)$_SESSION['user_id'];
+    $tableExistsResult = mysqli_query($dbc, "SHOW TABLES LIKE 'deposits'");
+
+    if ($tableExistsResult && mysqli_num_rows($tableExistsResult) > 0) {
+        $columnsResult = mysqli_query($dbc, 'SHOW COLUMNS FROM deposits');
+        $depositColumns = [];
+
+        if ($columnsResult) {
+            while ($col = mysqli_fetch_assoc($columnsResult)) {
+                $depositColumns[] = $col['Field'];
+            }
+        }
+
+        $idExpr = in_array('deposit_id', $depositColumns, true)
+            ? 'deposit_id'
+            : (in_array('public_id', $depositColumns, true) ? 'public_id' : 'CAST(id AS CHAR)');
+
+        $netAmountExpr = in_array('net_amount', $depositColumns, true)
+            ? 'net_amount'
+            : (in_array('amount', $depositColumns, true) ? 'amount' : '0');
+
+        $completedAtExpr = in_array('completed_at', $depositColumns, true)
+            ? 'completed_at'
+            : (in_array('settled_at', $depositColumns, true) ? 'settled_at' : 'created_at');
+
+        $sql = "SELECT
+                    {$idExpr} AS activity_id,
+                    method,
+                    currency,
+                    {$netAmountExpr} AS net_amount,
+                    status,
+                    provider,
+                    created_at,
+                    {$completedAtExpr} AS completed_at
+                FROM deposits
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT 3";
+
+        $stmt = mysqli_prepare($dbc, $sql);
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 'i', $safeUserId);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+
+            if ($result) {
+                while ($row = mysqli_fetch_assoc($result)) {
+                    $row['activity_type'] = 'deposit';
+                    $recentActivities[] = $row;
+                }
+            }
+
+            mysqli_stmt_close($stmt);
+        }
+    }
+}
+
+if (isset($dbc, $_SESSION['user_id'])) {
+    $safeUserId = (int)$_SESSION['user_id'];
+    $tableExistsResult = mysqli_query($dbc, "SHOW TABLES LIKE 'deposits'");
+
+    if ($tableExistsResult && mysqli_num_rows($tableExistsResult) > 0) {
+        $columnsResult = mysqli_query($dbc, 'SHOW COLUMNS FROM deposits');
+        $depositColumns = [];
+
+        if ($columnsResult) {
+            while ($col = mysqli_fetch_assoc($columnsResult)) {
+                $depositColumns[] = $col['Field'];
+            }
+        }
+
+        $idExpr = in_array('deposit_id', $depositColumns, true)
+            ? 'deposit_id'
+            : (in_array('public_id', $depositColumns, true) ? 'public_id' : 'CAST(id AS CHAR)');
+
+        $netAmountExpr = in_array('net_amount', $depositColumns, true)
+            ? 'net_amount'
+            : (in_array('amount', $depositColumns, true) ? 'amount' : '0');
+
+        $completedAtExpr = in_array('completed_at', $depositColumns, true)
+            ? 'completed_at'
+            : (in_array('settled_at', $depositColumns, true) ? 'settled_at' : 'created_at');
+
+        $sql = "SELECT
+                    {$idExpr} AS activity_id,
+                    method,
+                    currency,
+                    {$netAmountExpr} AS net_amount,
+                    status,
+                    provider,
+                    created_at,
+                    {$completedAtExpr} AS completed_at
+                FROM deposits
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT 500";
+
+        $stmt = mysqli_prepare($dbc, $sql);
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 'i', $safeUserId);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+
+            if ($result) {
+                while ($row = mysqli_fetch_assoc($result)) {
+                    $row['activity_type'] = 'deposit';
+                    $allActivities[] = $row;
+                }
+            }
+
+            mysqli_stmt_close($stmt);
+        }
+    }
+}
+
+function dashboard_activity_time_label(?string $createdAt): string
+{
+    if (empty($createdAt)) {
+        return 'Recently';
+    }
+
+    $createdTs = strtotime($createdAt);
+    if ($createdTs === false) {
+        return 'Recently';
+    }
+
+    $diff = time() - $createdTs;
+    if ($diff < 60) {
+        return 'Just now';
+    }
+    if ($diff < 3600) {
+        return floor($diff / 60) . ' min ago';
+    }
+    if ($diff < 86400) {
+        return floor($diff / 3600) . ' hr ago';
+    }
+    if ($diff < 172800) {
+        return 'Yesterday';
+    }
+
+    return date('j M', $createdTs);
+}
+
+function dashboard_deposit_activity_meta(string $method, string $status): array
+{
+    $safeMethod = strtolower($method);
+    $safeStatus = strtolower($status);
+
+    $map = [
+        'bank' => ['icon_class' => 'fas fa-university', 'bg' => 'rgba(59, 130, 246, 0.12)', 'color' => '#3b82f6', 'label' => 'Bank Deposit'],
+        'card' => ['icon_class' => 'fas fa-credit-card', 'bg' => 'rgba(16, 185, 129, 0.12)', 'color' => '#10b981', 'label' => 'Card Deposit'],
+        // Use the brand icon for Apple Pay instead of solid fallback icon.
+        'apple' => ['icon_class' => 'fab fa-apple', 'bg' => 'rgba(17, 24, 39, 0.10)', 'color' => 'var(--text-primary)', 'label' => 'Apple Pay Deposit'],
+    ];
+
+    $meta = $map[$safeMethod] ?? ['icon_class' => 'fas fa-arrow-down', 'bg' => 'var(--icon-bg-default)', 'color' => 'var(--text-primary)', 'label' => 'Deposit'];
+
+    if ($safeStatus === 'completed') {
+        $meta['sub'] = 'Completed';
+    } elseif ($safeStatus === 'pending_provider' || $safeStatus === 'pending_webhook') {
+        $meta['sub'] = 'Pending';
+    } elseif ($safeStatus === 'failed') {
+        $meta['sub'] = 'Failed';
+    } elseif ($safeStatus === 'reversed') {
+        $meta['sub'] = 'Reversed';
+    } else {
+        $meta['sub'] = ucfirst($safeStatus ?: 'Initiated');
+    }
+
+    return $meta;
+}
+
+function dashboard_activity_datetime_label(?string $timestamp): string
+{
+    if (empty($timestamp)) {
+        return 'N/A';
+    }
+
+    $ts = strtotime($timestamp);
+    if ($ts === false) {
+        return 'N/A';
+    }
+
+    return date('d M Y, H:i', $ts);
+}
+
+$allActivitiesPayload = [];
+if (!empty($allActivities)) {
+    foreach ($allActivities as $activity) {
+        $meta = dashboard_deposit_activity_meta((string)($activity['method'] ?? ''), (string)($activity['status'] ?? ''));
+        $allActivitiesPayload[] = [
+            'activity_type' => ucfirst((string)($activity['activity_type'] ?? 'Activity')),
+            'label' => (string)$meta['label'],
+            'status_raw' => (string)($activity['status'] ?? 'unknown'),
+            'status_sub' => (string)$meta['sub'],
+            'method' => (string)($activity['method'] ?? 'n/a'),
+            'icon_class' => (string)($meta['icon_class'] ?? 'fas fa-arrow-down'),
+            'amount' => number_format((float)($activity['net_amount'] ?? 0), 2),
+            'currency' => strtoupper((string)($activity['currency'] ?? 'GBP')),
+            'time_label' => dashboard_activity_time_label($activity['created_at'] ?? null),
+            'created_label' => dashboard_activity_datetime_label($activity['created_at'] ?? null),
+            'completed_label' => dashboard_activity_datetime_label($activity['completed_at'] ?? null),
+        ];
+    }
+}
+
 require_once 'templates/head.php';
 ?>
 
@@ -114,39 +326,51 @@ require_once 'templates/head.php';
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="section-heading mb-0">Activity</h3>
-                    <a href="payments.php" style="font-size: 0.85rem; color: var(--accent); font-weight: 600; text-decoration: none;">See All <i class="fas fa-chevron-right ms-1" style="font-size: 0.75rem;"></i></a>
+                    <button type="button" data-bs-toggle="offcanvas" data-bs-target="#allActivityModal" style="font-size: 0.85rem; color: var(--accent); font-weight: 600; text-decoration: none; background: transparent; border: none; padding: 0;">See All <i class="fas fa-chevron-right ms-1" style="font-size: 0.75rem;"></i></button>
                 </div>
                 <div class="list-pro">
-                    <div class="asset-row" style="padding: 0.75rem 1rem;">
-                        <div class="asset-icon" style="background: var(--icon-bg-default); width: 40px; height: 40px; font-size: 1.1rem;"><i class="fas fa-coffee"></i></div>
-                        <div class="asset-info">
-                            <div class="asset-name" style="font-size: 0.95rem;">Starbucks</div>
-                            <div class="asset-sub">Today</div>
+                    <?php if (!empty($recentActivities)): ?>
+                        <?php foreach ($recentActivities as $activity): ?>
+                            <?php
+                                $meta = dashboard_deposit_activity_meta((string)($activity['method'] ?? ''), (string)($activity['status'] ?? ''));
+                                $currency = strtoupper((string)($activity['currency'] ?? 'GBP'));
+                                $amount = number_format((float)($activity['net_amount'] ?? 0), 2);
+                                $timeLabel = dashboard_activity_time_label($activity['created_at'] ?? null);
+                                $statusSub = $meta['sub'];
+                                $activityType = ucfirst((string)($activity['activity_type'] ?? 'Activity'));
+                                $createdLabel = dashboard_activity_datetime_label($activity['created_at'] ?? null);
+                                $completedLabel = dashboard_activity_datetime_label($activity['completed_at'] ?? null);
+                            ?>
+                               <div class="asset-row" style="padding: 0.75rem 1rem;" data-bs-toggle="offcanvas" data-bs-target="#activityDetailsModal"
+                                 data-activity-type="<?php echo htmlspecialchars($activityType, ENT_QUOTES); ?>"
+                                 data-activity-label="<?php echo htmlspecialchars($meta['label'], ENT_QUOTES); ?>"
+                                 data-activity-status="<?php echo htmlspecialchars((string)($activity['status'] ?? 'unknown'), ENT_QUOTES); ?>"
+                                 data-activity-method="<?php echo htmlspecialchars((string)($activity['method'] ?? 'n/a'), ENT_QUOTES); ?>"
+                                   data-activity-icon="<?php echo htmlspecialchars($meta['icon_class'], ENT_QUOTES); ?>"
+                                 data-activity-amount="<?php echo htmlspecialchars($amount, ENT_QUOTES); ?>"
+                                 data-activity-currency="<?php echo htmlspecialchars($currency, ENT_QUOTES); ?>"
+                                 data-activity-created="<?php echo htmlspecialchars($createdLabel, ENT_QUOTES); ?>"
+                                 data-activity-completed="<?php echo htmlspecialchars($completedLabel, ENT_QUOTES); ?>"
+                                 data-activity-id="<?php echo htmlspecialchars((string)($activity['activity_id'] ?? 'n/a'), ENT_QUOTES); ?>">
+                                <div class="asset-icon" style="background: <?php echo htmlspecialchars($meta['bg'], ENT_QUOTES); ?>; color: <?php echo htmlspecialchars($meta['color'], ENT_QUOTES); ?>; width: 40px; height: 40px; font-size: 1.1rem;"><i class="<?php echo htmlspecialchars($meta['icon_class'], ENT_QUOTES); ?>"></i></div>
+                                <div class="asset-info">
+                                    <div class="asset-name" style="font-size: 0.95rem;"><?php echo htmlspecialchars($meta['label'], ENT_QUOTES); ?></div>
+                                    <div class="asset-sub"><?php echo htmlspecialchars($timeLabel, ENT_QUOTES); ?> • <?php echo htmlspecialchars($statusSub, ENT_QUOTES); ?></div>
+                                </div>
+                                <div class="asset-value">
+                                    <div class="asset-price text-success" style="font-size: 0.95rem;">+ <?php echo htmlspecialchars($currency, ENT_QUOTES); ?> <?php echo htmlspecialchars($amount, ENT_QUOTES); ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="asset-row" style="padding: 0.85rem 1rem; cursor: default;">
+                            <div class="asset-icon" style="background: var(--icon-bg-default); width: 40px; height: 40px; font-size: 1.1rem;"><i class="fas fa-clock"></i></div>
+                            <div class="asset-info">
+                                <div class="asset-name" style="font-size: 0.95rem;">No recent activity yet</div>
+                                <div class="asset-sub">Your latest platform activity will appear here.</div>
+                            </div>
                         </div>
-                        <div class="asset-value">
-                            <div class="asset-price" style="font-size: 0.95rem;">- £4.50</div>
-                        </div>
-                    </div>
-                    <div class="asset-row" style="padding: 0.75rem 1rem;">
-                        <div class="asset-icon" style="background: rgba(0, 210, 106, 0.1); color: var(--accent); width: 40px; height: 40px; font-size: 1.1rem;"><i class="fas fa-arrow-down"></i></div>
-                        <div class="asset-info">
-                            <div class="asset-name" style="font-size: 0.95rem;">Bank Deposit</div>
-                            <div class="asset-sub">Yesterday</div>
-                        </div>
-                        <div class="asset-value">
-                            <div class="asset-price text-success" style="font-size: 0.95rem;">+ £50.00</div>
-                        </div>
-                    </div>
-                    <div class="asset-row" style="padding: 0.75rem 1rem;">
-                        <div class="asset-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; width: 40px; height: 40px; font-size: 1.1rem;"><i class="fas fa-film"></i></div>
-                        <div class="asset-info">
-                            <div class="asset-name" style="font-size: 0.95rem;">Netflix</div>
-                            <div class="asset-sub">2 days ago</div>
-                        </div>
-                        <div class="asset-value">
-                            <div class="asset-price" style="font-size: 0.95rem;">- £10.99</div>
-                        </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
 
             </div>
@@ -407,6 +631,79 @@ require_once 'templates/head.php';
         </div>
     </div>
 
+    <!-- All Activities Offcanvas -->
+    <div class="offcanvas offcanvas-end chat-modal" tabindex="-1" id="allActivityModal" style="z-index: 10500;">
+        <div class="chat-header pb-3 border-bottom border-secondary border-opacity-10 align-items-center">
+            <div data-bs-dismiss="offcanvas" class="shadow-sm" style="cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border-radius: 14px; border: 1px solid var(--border-light); background: var(--bg-surface); transition: background 0.2s;"><i class="fas fa-arrow-right"></i></div>
+            <div class="text-end">
+                <div style="font-weight: 700; font-size: 1.1rem;">All Activity</div>
+                <div id="allActivityCount" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Most recent first</div>
+            </div>
+        </div>
+
+        <div id="allActivityBody" class="chat-body d-flex flex-column" style="padding: 1.5rem 1rem 6rem 1rem; overflow-y: auto;">
+            <div id="allActivityList" class="list-pro"></div>
+            <div id="allActivityLoading" class="text-center mt-3" style="font-size: 0.85rem; color: var(--text-secondary); display: none;">
+                Loading more activity...
+            </div>
+            <div id="allActivityEnd" class="text-center mt-3" style="font-size: 0.85rem; color: var(--text-secondary); display: none;">
+                You have reached the end of your activity feed.
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Details Offcanvas -->
+    <div class="offcanvas offcanvas-end chat-modal" tabindex="-1" id="activityDetailsModal" style="z-index: 10500;">
+        <div class="chat-header pb-3 border-bottom border-secondary border-opacity-10 align-items-center">
+            <div data-bs-dismiss="offcanvas" class="shadow-sm" style="cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border-radius: 14px; border: 1px solid var(--border-light); background: var(--bg-surface); transition: background 0.2s;"><i class="fas fa-arrow-right"></i></div>
+            <div class="text-end">
+                <div style="font-weight: 700; font-size: 1.1rem;">Activity Details</div>
+                <div id="activityDetailsType" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Activity</div>
+            </div>
+        </div>
+        <div class="chat-body d-flex flex-column" style="padding: 1.5rem 1rem 6rem 1rem; overflow-y: auto;">
+            <div id="activityDetailsHeroCard" class="swap-input-box mb-4" style="background: linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05)); border: 1px solid var(--border-light); border-radius: 24px; padding: 1.3rem 1.15rem;">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <div id="activityDetailsIconWrap" style="width: 48px; height: 48px; border-radius: 14px; background: var(--icon-bg-default); color: var(--text-primary); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-right: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08);">
+                            <i id="activityDetailsIcon" class="fas fa-list"></i>
+                        </div>
+                        <div>
+                            <div id="activityDetailsLabel" style="font-weight: 700; font-size: 1.05rem; color: var(--text-primary); line-height: 1.15;">-</div>
+                            <div style="font-size: 0.76rem; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.3px; margin-top: 4px; text-transform: uppercase;">Transaction</div>
+                        </div>
+                    </div>
+                    <span id="activityDetailsStatus" style="font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border-light); background: rgba(255,255,255,0.5); color: var(--text-secondary);">-</span>
+                </div>
+
+                <div id="activityDetailsAmount" style="font-size: 2.1rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: var(--text-primary); line-height: 1;">-</div>
+                <div id="activityDetailsAmountSub" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Wallet movement</div>
+            </div>
+
+            <div id="activityDetailsMetaCard" class="swap-input-box mb-3" style="background: var(--bg-surface-light); border: 1px solid var(--border-light); border-radius: 20px; padding: 0.5rem 1rem;">
+                <div class="d-flex justify-content-between py-3 border-bottom" style="border-color: var(--asset-border) !important;">
+                    <span style="color: var(--text-secondary); font-size: 0.86rem;">Method</span>
+                    <strong id="activityDetailsMethod" style="font-size: 0.9rem;">-</strong>
+                </div>
+                <div class="d-flex justify-content-between py-3 border-bottom" style="border-color: var(--asset-border) !important;">
+                    <span style="color: var(--text-secondary); font-size: 0.86rem;">Created</span>
+                    <strong id="activityDetailsCreated" style="font-size: 0.9rem; text-align: right; margin-left: 10px;">-</strong>
+                </div>
+                <div class="d-flex justify-content-between py-3">
+                    <span style="color: var(--text-secondary); font-size: 0.86rem;">Completed</span>
+                    <strong id="activityDetailsCompleted" style="font-size: 0.9rem; text-align: right; margin-left: 10px;">-</strong>
+                </div>
+            </div>
+
+            <div id="activityDetailsAuditNote" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 16px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start;">
+                <i class="fas fa-shield-check" style="color: #10b981; margin-top: 2px;"></i>
+                <div id="activityDetailsAuditText" style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45;">
+                    Activity entries are ordered by latest updates and represent immutable audit trail events.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
@@ -414,6 +711,7 @@ require_once 'templates/head.php';
     <script>
         const STRIPE_PUBLISHABLE_KEY = '<?php echo htmlspecialchars($apiConfig['stripe_publishable_key'] ?? '', ENT_QUOTES); ?>';
         const API_BASE_URL = window.FINPAY_API_BASE_URL || '../api/v1';
+        const ALL_ACTIVITIES = <?php echo json_encode($allActivitiesPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         let selectedMethod = 'bank';
         let activeCardDepositId = null;
         let activeCardClientSecret = null;
@@ -421,6 +719,11 @@ require_once 'templates/head.php';
         let stripe = null;
         let stripeElements = null;
         let cardElement = null;
+        let renderedActivityCount = 0;
+        let isAppendingActivities = false;
+
+        const INITIAL_ACTIVITY_BATCH = 15;
+        const NEXT_ACTIVITY_BATCH = 6;
 
         function setFeedback(id, message, isError = false) {
             const el = document.getElementById(id);
@@ -642,6 +945,333 @@ require_once 'templates/head.php';
                 payBtn.disabled = false;
                 payBtn.textContent = 'Pay Securely';
             }
+        }
+
+        function normalizeStatusLabel(rawStatus) {
+            const value = String(rawStatus || '').toLowerCase();
+            if (value.includes('complete')) return 'Completed';
+            if (value.includes('fail')) return 'Failed';
+            if (value.includes('reverse')) return 'Reversed';
+            if (value.includes('pending')) return 'Pending';
+            return 'Pending';
+        }
+
+        function getStatusColor(rawStatus) {
+            const value = String(rawStatus || '').toLowerCase();
+            if (value.includes('complete')) return '#10b981';
+            if (value.includes('fail') || value.includes('reverse')) return '#ef4444';
+            if (value.includes('pending')) return '#f59e0b';
+            return 'var(--text-secondary)';
+        }
+
+        function getIconTone(iconClass) {
+            if (iconClass.includes('fa-university')) {
+                return { bg: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' };
+            }
+            if (iconClass.includes('fa-credit-card')) {
+                return { bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981' };
+            }
+            if (iconClass.includes('fa-apple')) {
+                return { bg: 'rgba(17, 24, 39, 0.10)', color: 'var(--text-primary)' };
+            }
+            return { bg: 'var(--icon-bg-default)', color: 'var(--text-primary)' };
+        }
+
+        function createAllActivityRow(activity) {
+            const row = document.createElement('div');
+            row.className = 'asset-row';
+            row.style.padding = '0.75rem 1rem';
+            row.dataset.bsToggle = 'offcanvas';
+            row.dataset.bsTarget = '#activityDetailsModal';
+            row.dataset.activityType = activity.activity_type || 'Activity';
+            row.dataset.activityLabel = activity.label || 'Activity';
+            row.dataset.activityStatus = activity.status_raw || 'pending';
+            row.dataset.activityMethod = activity.method || 'n/a';
+            row.dataset.activityIcon = activity.icon_class || 'fas fa-arrow-down';
+            row.dataset.activityAmount = activity.amount || '0.00';
+            row.dataset.activityCurrency = activity.currency || 'GBP';
+            row.dataset.activityCreated = activity.created_label || 'N/A';
+            row.dataset.activityCompleted = activity.completed_label || 'N/A';
+
+            const iconTone = getIconTone(row.dataset.activityIcon);
+            const statusColor = getStatusColor(row.dataset.activityStatus);
+            const statusLabel = normalizeStatusLabel(row.dataset.activityStatus);
+
+            row.innerHTML = `
+                <div class="asset-icon" style="background: ${iconTone.bg}; color: ${iconTone.color}; width: 40px; height: 40px; font-size: 1.1rem;"><i class="${row.dataset.activityIcon}"></i></div>
+                <div class="asset-info">
+                    <div class="asset-name" style="font-size: 0.95rem;">${row.dataset.activityLabel}</div>
+                    <div class="asset-sub">${activity.time_label || 'Recently'} • <span style="color: ${statusColor}; font-weight: 600;">${statusLabel}</span></div>
+                </div>
+                <div class="asset-value">
+                    <div class="asset-price text-success" style="font-size: 0.95rem;">+ ${row.dataset.activityCurrency} ${row.dataset.activityAmount}</div>
+                </div>
+            `;
+
+            return row;
+        }
+
+        function appendMoreActivities(batchSize) {
+            if (isAppendingActivities) {
+                return;
+            }
+
+            const listEl = document.getElementById('allActivityList');
+            const loadingEl = document.getElementById('allActivityLoading');
+            const endEl = document.getElementById('allActivityEnd');
+
+            if (!listEl || !loadingEl || !endEl) {
+                return;
+            }
+
+            if (renderedActivityCount >= ALL_ACTIVITIES.length) {
+                loadingEl.style.display = 'none';
+                endEl.style.display = ALL_ACTIVITIES.length > 0 ? 'block' : 'none';
+                return;
+            }
+
+            isAppendingActivities = true;
+            loadingEl.style.display = 'block';
+
+            const nextCount = Math.min(batchSize, ALL_ACTIVITIES.length - renderedActivityCount);
+            for (let i = 0; i < nextCount; i += 1) {
+                const item = ALL_ACTIVITIES[renderedActivityCount + i];
+                listEl.appendChild(createAllActivityRow(item));
+            }
+
+            renderedActivityCount += nextCount;
+            loadingEl.style.display = 'none';
+            endEl.style.display = renderedActivityCount >= ALL_ACTIVITIES.length && ALL_ACTIVITIES.length > 0 ? 'block' : 'none';
+            isAppendingActivities = false;
+        }
+
+        function resetAllActivityFeed() {
+            const listEl = document.getElementById('allActivityList');
+            const loadingEl = document.getElementById('allActivityLoading');
+            const endEl = document.getElementById('allActivityEnd');
+            const countEl = document.getElementById('allActivityCount');
+
+            if (!listEl || !loadingEl || !endEl || !countEl) {
+                return;
+            }
+
+            listEl.innerHTML = '';
+            renderedActivityCount = 0;
+            loadingEl.style.display = 'none';
+            endEl.style.display = 'none';
+
+            if (ALL_ACTIVITIES.length === 0) {
+                listEl.innerHTML = `
+                    <div class="asset-row" style="padding: 0.95rem 1rem; cursor: default;">
+                        <div class="asset-icon" style="background: var(--icon-bg-default); width: 40px; height: 40px; font-size: 1.1rem;"><i class="fas fa-clock"></i></div>
+                        <div class="asset-info">
+                            <div class="asset-name" style="font-size: 0.95rem;">No recent activity</div>
+                            <div class="asset-sub">Activity will show here once transactions are created.</div>
+                        </div>
+                    </div>
+                `;
+                countEl.textContent = 'Most recent first';
+                return;
+            }
+
+            countEl.textContent = `${ALL_ACTIVITIES.length} total • Most recent first`;
+            appendMoreActivities(INITIAL_ACTIVITY_BATCH);
+        }
+
+        const allActivityModal = document.getElementById('allActivityModal');
+        const allActivityBody = document.getElementById('allActivityBody');
+
+        if (allActivityModal) {
+            allActivityModal.addEventListener('show.bs.offcanvas', function() {
+                resetAllActivityFeed();
+            });
+        }
+
+        if (allActivityBody) {
+            allActivityBody.addEventListener('scroll', function() {
+                const nearBottom = allActivityBody.scrollTop + allActivityBody.clientHeight >= allActivityBody.scrollHeight - 40;
+                if (nearBottom && renderedActivityCount < ALL_ACTIVITIES.length) {
+                    appendMoreActivities(NEXT_ACTIVITY_BATCH);
+                }
+            });
+        }
+
+        const activityDetailsModal = document.getElementById('activityDetailsModal');
+        if (activityDetailsModal) {
+            function setActivityDetailsLoading(isLoading) {
+                const fields = [
+                    'activityDetailsLabel',
+                    'activityDetailsStatus',
+                    'activityDetailsAmount',
+                    'activityDetailsAmountSub',
+                    'activityDetailsMethod',
+                    'activityDetailsCreated',
+                    'activityDetailsCompleted',
+                    'activityDetailsAuditText',
+                ];
+
+                fields.forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (!el) {
+                        return;
+                    }
+
+                    if (isLoading) {
+                        el.dataset.previousText = el.textContent || '';
+                        el.textContent = ' '; 
+                        el.style.borderRadius = '8px';
+                        el.style.background = 'linear-gradient(90deg, rgba(148,163,184,0.08) 0%, rgba(148,163,184,0.22) 50%, rgba(148,163,184,0.08) 100%)';
+                        el.style.backgroundSize = '220% 100%';
+                        el.style.animation = 'activityShimmer 1s ease-in-out infinite';
+                        el.style.color = 'transparent';
+                    } else {
+                        el.style.background = 'transparent';
+                        el.style.backgroundSize = '';
+                        el.style.animation = '';
+                        el.style.color = '';
+                    }
+                });
+
+                const styleId = 'activityShimmerStyle';
+                if (isLoading && !document.getElementById(styleId)) {
+                    const style = document.createElement('style');
+                    style.id = styleId;
+                    style.textContent = '@keyframes activityShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }';
+                    document.head.appendChild(style);
+                }
+            }
+
+            function playActivityDetailsEntrance() {
+                const sequence = [
+                    { id: 'activityDetailsHeroCard', delay: 0 },
+                    { id: 'activityDetailsMetaCard', delay: 80 },
+                    { id: 'activityDetailsAuditNote', delay: 160 },
+                ];
+
+                sequence.forEach(({ id, delay }) => {
+                    const el = document.getElementById(id);
+                    if (!el) {
+                        return;
+                    }
+
+                    el.style.transition = 'none';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(10px)';
+
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            el.style.transition = 'opacity 320ms ease, transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+                            el.style.opacity = '1';
+                            el.style.transform = 'translateY(0)';
+                        }, delay);
+                    });
+                });
+            }
+
+            activityDetailsModal.addEventListener('show.bs.offcanvas', function(event) {
+                const trigger = event.relatedTarget;
+                if (!trigger) {
+                    return;
+                }
+
+                setActivityDetailsLoading(true);
+
+                setTimeout(() => {
+                    setActivityDetailsLoading(false);
+
+                    document.getElementById('activityDetailsType').textContent = trigger.getAttribute('data-activity-type') || 'Activity';
+                    document.getElementById('activityDetailsLabel').textContent = trigger.getAttribute('data-activity-label') || 'N/A';
+                    const rawStatus = (trigger.getAttribute('data-activity-status') || 'N/A').toLowerCase();
+                    const statusEl = document.getElementById('activityDetailsStatus');
+                    let statusLabel = 'Pending';
+
+                    if (rawStatus.includes('complete')) {
+                        statusLabel = 'Completed';
+                    } else if (rawStatus.includes('fail')) {
+                        statusLabel = 'Failed';
+                    } else if (rawStatus.includes('reverse')) {
+                        statusLabel = 'Reversed';
+                    } else if (rawStatus.includes('pending')) {
+                        // Keep all pending variants under one clean status label.
+                        statusLabel = 'Pending';
+                    }
+
+                    statusEl.textContent = statusLabel;
+                    let amountTone = '#f59e0b';
+                    let amountSubText = 'Awaiting settlement';
+                    let auditText = 'This activity is currently processing. Final wallet balance updates are applied once settlement completes.';
+
+                    if (rawStatus.includes('complete')) {
+                        statusEl.style.color = '#10b981';
+                        statusEl.style.background = 'rgba(16, 185, 129, 0.12)';
+                        statusEl.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+                        amountTone = '#10b981';
+                        amountSubText = 'Successfully settled';
+                        auditText = 'This activity is finalized and reflected in your wallet balance and records.';
+                    } else if (rawStatus.includes('fail') || rawStatus.includes('reverse')) {
+                        statusEl.style.color = '#ef4444';
+                        statusEl.style.background = 'rgba(239, 68, 68, 0.12)';
+                        statusEl.style.borderColor = 'rgba(239, 68, 68, 0.35)';
+                        amountTone = '#ef4444';
+                        amountSubText = 'Action required';
+                        auditText = 'This activity did not complete successfully. You can retry from the relevant funding flow.';
+                    } else if (rawStatus.includes('pending')) {
+                        statusEl.style.color = '#f59e0b';
+                        statusEl.style.background = 'rgba(245, 158, 11, 0.14)';
+                        statusEl.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+                        amountTone = '#f59e0b';
+                        amountSubText = 'Awaiting settlement';
+                        auditText = 'This activity is pending confirmation and may take a short while to complete.';
+                    } else {
+                        statusEl.style.color = 'var(--text-secondary)';
+                        statusEl.style.background = 'rgba(107, 114, 128, 0.12)';
+                        statusEl.style.borderColor = 'var(--border-light)';
+                        amountSubText = 'In progress';
+                        auditText = 'Status updates are in progress. Refresh shortly to see the latest state.';
+                    }
+
+                    document.getElementById('activityDetailsMethod').textContent = trigger.getAttribute('data-activity-method') || 'N/A';
+
+                    const amount = trigger.getAttribute('data-activity-amount') || '0.00';
+                    const currency = trigger.getAttribute('data-activity-currency') || 'GBP';
+                    const amountEl = document.getElementById('activityDetailsAmount');
+                    amountEl.textContent = `+ ${currency} ${amount}`;
+                    amountEl.style.color = amountTone;
+                    const amountSubEl = document.getElementById('activityDetailsAmountSub');
+                    if (amountSubEl) {
+                        amountSubEl.textContent = amountSubText;
+                    }
+
+                    const iconWrap = document.getElementById('activityDetailsIconWrap');
+                    const icon = document.getElementById('activityDetailsIcon');
+                    const iconClass = trigger.getAttribute('data-activity-icon') || 'fas fa-list';
+                    icon.className = iconClass;
+
+                    if (iconClass.includes('fa-university')) {
+                        iconWrap.style.background = 'rgba(59, 130, 246, 0.12)';
+                        iconWrap.style.color = '#3b82f6';
+                    } else if (iconClass.includes('fa-credit-card')) {
+                        iconWrap.style.background = 'rgba(16, 185, 129, 0.12)';
+                        iconWrap.style.color = '#10b981';
+                    } else if (iconClass.includes('fa-apple')) {
+                        iconWrap.style.background = 'rgba(17, 24, 39, 0.10)';
+                        iconWrap.style.color = 'var(--text-primary)';
+                    } else {
+                        iconWrap.style.background = 'var(--icon-bg-default)';
+                        iconWrap.style.color = 'var(--text-primary)';
+                    }
+
+                    document.getElementById('activityDetailsCreated').textContent = trigger.getAttribute('data-activity-created') || 'N/A';
+                    document.getElementById('activityDetailsCompleted').textContent = trigger.getAttribute('data-activity-completed') || 'N/A';
+
+                    const auditTextEl = document.getElementById('activityDetailsAuditText');
+                    if (auditTextEl) {
+                        auditTextEl.textContent = auditText;
+                    }
+
+                    playActivityDetailsEntrance();
+                }, 120);
+            });
         }
 
         updateDepositButton();

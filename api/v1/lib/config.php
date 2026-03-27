@@ -2,7 +2,10 @@
 
 function api_config(): array
 {
+    $appEnv = strtolower((string)(getenv('APP_ENV') ?: 'development'));
+
     $config = [
+        'app_env' => $appEnv,
         'stripe_secret_key' => getenv('STRIPE_SECRET_KEY') ?: '',
         'stripe_publishable_key' => getenv('STRIPE_PUBLISHABLE_KEY') ?: '',
         'stripe_webhook_secret' => getenv('STRIPE_WEBHOOK_SECRET') ?: '',
@@ -12,11 +15,14 @@ function api_config(): array
         'max_deposit_amount' => 100000,
     ];
 
-    $localConfigFile = __DIR__ . '/config.local.php';
-    if (is_file($localConfigFile)) {
-        $localConfig = require $localConfigFile;
-        if (is_array($localConfig)) {
-            $config = array_merge($config, $localConfig);
+    // In production, only environment variables should be used.
+    if ($appEnv !== 'production') {
+        $localConfigFile = __DIR__ . '/config.local.php';
+        if (is_file($localConfigFile)) {
+            $localConfig = require $localConfigFile;
+            if (is_array($localConfig)) {
+                $config = array_merge($config, $localConfig);
+            }
         }
     }
 
