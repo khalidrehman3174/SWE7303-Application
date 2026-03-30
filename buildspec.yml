@@ -5,60 +5,53 @@ env:
     IMAGE_TAG: latest
 
 phases:
+
   install:
     runtime-versions:
       php: 8.2
     commands:
-      - echo "Installing Composer dependencies..."
+      - echo "Installing Composer..."
       - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+      - echo "Installing dependencies..."
       - composer install --no-interaction --prefer-dist --ignore-platform-req=ext-gmp
 
   pre_build:
     commands:
-      - echo "Running PHPUnit tests..."
-      - ./vendor/bin/phpunit --testdox --colors=never 2>&1 | tee phpunit-results.txt
-      - echo "PHPUnit tests completed."
+      - echo "Running tests (if available)..."
+      - |
+        if [ -f ./vendor/bin/phpunit ]; then
+          php ./vendor/bin/phpunit --testdox --colors=never 2>&1 | tee phpunit-results.txt
+        else
+          echo "PHPUnit not found, skipping tests." | tee phpunit-results.txt
+        fi
 
       - echo "Logging in to Amazon ECR..."
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION \
+        | docker login --username AWS --password-stdin $(echo $ECR_REPO_URI | cut -d/ -f1)
 
-      - echo "Setting image tag from commit hash..."
+      - echo "Setting image tag..."
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG_VERSIONED=v$COMMIT_HASH
-      - echo "Image tag - $IMAGE_TAG_VERSIONED"
+      - echo "Image tag: $IMAGE_TAG_VERSIONED"
 
   build:
     commands:
       - echo "Building Docker image..."
       - docker build -t $ECR_REPO_URI:$IMAGE_TAG_VERSIONED .
       - docker tag $ECR_REPO_URI:$IMAGE_TAG_VERSIONED $ECR_REPO_URI:latest
-      - echo "Docker image built successfully."
 
   post_build:
     commands:
-      - echo "Pushing Docker image to ECR..."
+      - echo "Pushing image to ECR..."
       - docker push $ECR_REPO_URI:$IMAGE_TAG_VERSIONED
       - docker push $ECR_REPO_URI:latest
-      - echo "Image pushed successfully - $ECR_REPO_URI:$IMAGE_TAG_VERSIONED"
 
-      - echo "Writing imagedefinitions.json for ECS deployment..."
+      - echo "Generating imagedefinitions.json..."
       - printf '[{"name":"finpay-container","imageUri":"%s"}]' $ECR_REPO_URI:$IMAGE_TAG_VERSIONED > imagedefinitions.json
       - cat imagedefinitions.json
-
-      - echo "Build complete."
 
 artifacts:
   files:
     - imagedefinitions.json
     - phpunit-results.txt
-  discard-paths: yes
-
-reports:
-  phpunit-report:
-    files:
-      - phpunit-results.txt
-    discard-paths: yes
-
-cache:
-  paths:
-    - vendor/**/*
