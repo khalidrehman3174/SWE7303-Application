@@ -88,6 +88,90 @@ function finpay_balance_sum_completed_gbp_for_table(mysqli $dbc, int $userId, st
     return (float)($row['total'] ?? 0.0);
 }
 
+function finpay_balance_sum_contact_payments_delta(mysqli $dbc, int $userId): float
+{
+    if (!finpay_balance_table_exists($dbc, 'payment_contact_transactions')) {
+        return 0.0;
+    }
+
+    $sent = 0.0;
+    $received = 0.0;
+
+    $sentStmt = mysqli_prepare(
+        $dbc,
+        "SELECT COALESCE(SUM(amount), 0) AS total
+         FROM payment_contact_transactions
+         WHERE user_id = ? AND direction = 'sent'"
+    );
+    if ($sentStmt) {
+        mysqli_stmt_bind_param($sentStmt, 'i', $userId);
+        mysqli_stmt_execute($sentStmt);
+        $sentResult = mysqli_stmt_get_result($sentStmt);
+        $sentRow = $sentResult ? mysqli_fetch_assoc($sentResult) : null;
+        mysqli_stmt_close($sentStmt);
+        $sent = (float)($sentRow['total'] ?? 0.0);
+    }
+
+    $receivedStmt = mysqli_prepare(
+        $dbc,
+        "SELECT COALESCE(SUM(amount), 0) AS total
+         FROM payment_contact_transactions
+         WHERE user_id = ? AND direction = 'received'"
+    );
+    if ($receivedStmt) {
+        mysqli_stmt_bind_param($receivedStmt, 'i', $userId);
+        mysqli_stmt_execute($receivedStmt);
+        $receivedResult = mysqli_stmt_get_result($receivedStmt);
+        $receivedRow = $receivedResult ? mysqli_fetch_assoc($receivedResult) : null;
+        mysqli_stmt_close($receivedStmt);
+        $received = (float)($receivedRow['total'] ?? 0.0);
+    }
+
+    return $sent - $received;
+}
+
+function finpay_balance_sum_contact_payment_withdrawals(mysqli $dbc, int $userId): float
+{
+    if (!finpay_balance_table_exists($dbc, 'withdrawals')) {
+        return 0.0;
+    }
+
+    $columns = finpay_balance_table_columns($dbc, 'withdrawals');
+    if (empty($columns)) {
+        return 0.0;
+    }
+
+    $userCol = finpay_balance_first_existing_column($columns, ['user_id']);
+    $statusCol = finpay_balance_first_existing_column($columns, ['status', 'state']);
+    $currencyCol = finpay_balance_first_existing_column($columns, ['currency', 'fiat_currency', 'asset']);
+    $amountCol = finpay_balance_first_existing_column($columns, ['net_amount', 'amount', 'withdrawal_amount']);
+    $methodCol = finpay_balance_first_existing_column($columns, ['method', 'type', 'transaction_type', 'category', 'source', 'reason']);
+
+    if ($userCol === null || $statusCol === null || $currencyCol === null || $amountCol === null || $methodCol === null) {
+        return 0.0;
+    }
+
+    $sql = "SELECT COALESCE(SUM({$amountCol}), 0) AS total
+            FROM withdrawals
+            WHERE {$userCol} = ?
+              AND LOWER({$statusCol}) = 'completed'
+              AND UPPER({$currencyCol}) = 'GBP'
+              AND LOWER(CAST({$methodCol} AS CHAR)) = 'contact_payment'";
+
+    $stmt = mysqli_prepare($dbc, $sql);
+    if (!$stmt) {
+        return 0.0;
+    }
+
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $row = $result ? mysqli_fetch_assoc($result) : null;
+    mysqli_stmt_close($stmt);
+
+    return (float)($row['total'] ?? 0.0);
+}
+
 function finpay_balance_format_payload(float $amount, string $source, ?array $components = null): array
 {
     $amount = (float)$amount;
@@ -120,6 +204,7 @@ function finpay_get_available_balance_gbp(mysqli $dbc, int $userId): array
         return finpay_balance_format_payload(0.0, 'none');
     }
 
+    $walletAmount = null;
     if (finpay_balance_table_exists($dbc, 'wallets')) {
         $stmt = mysqli_prepare($dbc, 'SELECT balance FROM wallets WHERE user_id = ? AND symbol = ? LIMIT 1');
         if ($stmt) {
@@ -131,7 +216,7 @@ function finpay_get_available_balance_gbp(mysqli $dbc, int $userId): array
             mysqli_stmt_close($stmt);
 
             if ($row && isset($row['balance'])) {
-                return finpay_balance_format_payload((float)$row['balance'], 'wallet');
+                $walletAmount = (float)$row['balance'];
             }
         }
     }
@@ -154,9 +239,27 @@ function finpay_get_available_balance_gbp(mysqli $dbc, int $userId): array
         $withdrawals += abs($tableTotal);
     }
 
-    $amount = $deposits - $withdrawals;
-    return finpay_balance_format_payload($amount, 'ledger', [
+    $contactPaymentDelta = finpay_balance_sum_contact_payments_delta($dbc, $userId);
+    $contactPaymentWithdrawals = finpay_balance_sum_contact_payment_withdrawals($dbc, $userId);
+    $contactAdjustment = max(0.0, $contactPaymentDelta - $contactPaymentWithdrawals);
+
+    $ledgerAmount = $deposits - $withdrawals - $contactAdjustment;
+
+    if ($walletAmount !== null) {
+        $resolvedAmount = max($walletAmount, $ledgerAmount);
+        $source = (abs($walletAmount - $ledgerAmount) < 0.00001) ? 'wallet' : 'wallet_reconciled';
+        return finpay_balance_format_payload($resolvedAmount, $source, [
+            'wallet' => $walletAmount,
+            'ledger' => $ledgerAmount,
+            'deposits' => $deposits,
+            'withdrawals' => $withdrawals,
+            'contact_adjustment' => $contactAdjustment,
+        ]);
+    }
+
+    return finpay_balance_format_payload($ledgerAmount, 'ledger', [
         'deposits' => $deposits,
         'withdrawals' => $withdrawals,
+        'contact_adjustment' => $contactAdjustment,
     ]);
 }

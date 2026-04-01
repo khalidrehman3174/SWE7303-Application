@@ -13,6 +13,18 @@ function process_rewards_table_exists(mysqli $dbc, string $tableName): bool
     }
 }
 
+function process_rewards_column_exists(mysqli $dbc, string $tableName, string $columnName): bool
+{
+    try {
+        $safeTable = mysqli_real_escape_string($dbc, $tableName);
+        $safeColumn = mysqli_real_escape_string($dbc, $columnName);
+        $res = mysqli_query($dbc, "SHOW COLUMNS FROM `$safeTable` LIKE '$safeColumn'");
+        return ($res instanceof mysqli_result) && mysqli_num_rows($res) > 0;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 if (isset($user_id) && $user_id) {
     $requiredTables = ['user_stakes', 'staking_plans', 'wallets', 'transactions'];
     foreach ($requiredTables as $tableName) {
@@ -21,12 +33,24 @@ if (isset($user_id) && $user_id) {
         }
     }
 
-    // Check for due payouts
-    $q_due = "SELECT s.*, p.apy, p.asset_symbol, p.name as plan_name 
-              FROM user_stakes s 
-              JOIN staking_plans p ON s.plan_id = p.id 
-              WHERE s.user_id = $user_id 
-              AND s.status = 'active' 
+    // Check for due payouts. Some databases may have partial staking_plans schema,
+    // so we safely map optional columns and provide defaults when absent.
+    $apyExpr = process_rewards_column_exists($dbc, 'staking_plans', 'apy')
+        ? 'p.apy'
+        : '0';
+    $assetExpr = process_rewards_column_exists($dbc, 'staking_plans', 'asset_symbol')
+        ? 'p.asset_symbol'
+        : "'BTC'";
+    $planNameExpr = process_rewards_column_exists($dbc, 'staking_plans', 'name')
+        ? 'p.name'
+        : "'Staking Plan'";
+
+    $safe_uid = (int)$user_id;
+    $q_due = "SELECT s.*, {$apyExpr} AS apy, {$assetExpr} AS asset_symbol, {$planNameExpr} AS plan_name
+              FROM user_stakes s
+              JOIN staking_plans p ON s.plan_id = p.id
+              WHERE s.user_id = {$safe_uid}
+              AND s.status = 'active'
               AND s.next_payout <= NOW()";
               
     $r_due = mysqli_query($dbc, $q_due);

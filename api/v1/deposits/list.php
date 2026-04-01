@@ -266,6 +266,130 @@ function list_fetch_withdrawal_activities(mysqli $dbc, int $userId, int $limitPe
     return $items;
 }
 
+function list_fetch_contact_payment_activities(mysqli $dbc, int $userId, int $limit): array
+{
+    $txColumns = list_fetch_table_columns($dbc, 'payment_contact_transactions');
+    if (empty($txColumns)) {
+        return [];
+    }
+
+    $txIdCol = list_first_existing_column($txColumns, ['id']);
+    $txUserCol = list_first_existing_column($txColumns, ['user_id']);
+    $txContactCol = list_first_existing_column($txColumns, ['contact_id']);
+    $txDirectionCol = list_first_existing_column($txColumns, ['direction']);
+    $txAmountCol = list_first_existing_column($txColumns, ['amount']);
+    $txNoteCol = list_first_existing_column($txColumns, ['note']);
+    $txCreatedCol = list_first_existing_column($txColumns, ['created_at']);
+
+    if ($txIdCol === null || $txUserCol === null || $txContactCol === null || $txDirectionCol === null || $txAmountCol === null || $txCreatedCol === null) {
+        return [];
+    }
+
+    $withdrawalRefMap = [];
+    $wColumns = list_fetch_table_columns($dbc, 'withdrawals');
+    if (!empty($wColumns)) {
+        $wUserCol = list_first_existing_column($wColumns, ['user_id']);
+        $wMethodCol = list_first_existing_column($wColumns, ['method', 'type', 'transaction_type', 'category', 'source', 'reason']);
+        $wCurrencyCol = list_first_existing_column($wColumns, ['currency', 'fiat_currency', 'asset']);
+        $wStatusCol = list_first_existing_column($wColumns, ['status', 'state']);
+        $wReferenceCol = list_first_existing_column($wColumns, ['reference', 'payment_reference', 'note', 'narration']);
+
+        if ($wUserCol !== null && $wMethodCol !== null && $wCurrencyCol !== null && $wStatusCol !== null && $wReferenceCol !== null) {
+            $wSql = "SELECT {$wReferenceCol} AS reference
+                     FROM withdrawals
+                     WHERE {$wUserCol} = ?
+                       AND LOWER(CAST({$wMethodCol} AS CHAR)) = 'contact_payment'
+                       AND UPPER({$wCurrencyCol}) = 'GBP'
+                       AND LOWER({$wStatusCol}) = 'completed'";
+            $wStmt = mysqli_prepare($dbc, $wSql);
+            if ($wStmt) {
+                mysqli_stmt_bind_param($wStmt, 'i', $userId);
+                mysqli_stmt_execute($wStmt);
+                $wResult = mysqli_stmt_get_result($wStmt);
+                if ($wResult) {
+                    while ($wRow = mysqli_fetch_assoc($wResult)) {
+                        $ref = trim((string)($wRow['reference'] ?? ''));
+                        if ($ref !== '') {
+                            $withdrawalRefMap[$ref] = true;
+                        }
+                    }
+                }
+                mysqli_stmt_close($wStmt);
+            }
+        }
+    }
+
+    $sql = "SELECT tx.*, pc.recipient_name, pc.account_number
+            FROM payment_contact_transactions tx
+            LEFT JOIN payment_contacts pc
+              ON pc.id = tx.{$txContactCol}
+             AND pc.user_id = tx.{$txUserCol}
+            WHERE tx.{$txUserCol} = ?
+            ORDER BY tx.{$txCreatedCol} DESC
+            LIMIT ?";
+    $stmt = mysqli_prepare($dbc, $sql);
+    if (!$stmt) {
+        return [];
+    }
+
+    mysqli_stmt_bind_param($stmt, 'ii', $userId, $limit);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    $items = [];
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $txId = (int)($row[$txIdCol] ?? 0);
+            if ($txId <= 0) {
+                continue;
+            }
+
+            $contactId = (int)($row[$txContactCol] ?? 0);
+            $reference = 'CP-' . $userId . '-' . $contactId . '-' . $txId;
+            if (isset($withdrawalRefMap[$reference])) {
+                continue;
+            }
+
+            $direction = strtolower(trim((string)($row[$txDirectionCol] ?? 'sent')));
+            $isSent = $direction !== 'received';
+            $amount = abs((float)($row[$txAmountCol] ?? 0.0));
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $name = list_clamp_contact_name((string)($row['recipient_name'] ?? ''), 48);
+            $masked = list_mask_account_number((string)($row['account_number'] ?? ''));
+            $displayLabel = $isSent ? ('Payment to ' . $name) : ('Payment from ' . $name);
+            $displayMethod = $name . ' (' . $masked . ')';
+
+            if ($txNoteCol !== null) {
+                $note = trim((string)($row[$txNoteCol] ?? ''));
+                if ($note !== '') {
+                    $displayMethod .= ' • ' . $note;
+                }
+            }
+
+            $items[] = [
+                'activity_id' => 'cp_tx_' . $txId,
+                'activity_type' => $isSent ? 'withdrawal' : 'deposit',
+                'method' => $isSent ? 'contact_payment' : 'contact_payment_received',
+                'method_raw' => $isSent ? 'contact_payment' : 'contact_payment_received',
+                'currency' => 'GBP',
+                'net_amount' => $amount,
+                'status' => 'completed',
+                'created_at' => (string)($row[$txCreatedCol] ?? ''),
+                'completed_at' => (string)($row[$txCreatedCol] ?? ''),
+                'reference' => $reference,
+                'display_label' => $displayLabel,
+                'display_method' => $displayMethod,
+            ];
+        }
+    }
+
+    mysqli_stmt_close($stmt);
+    return $items;
+}
+
 function list_activity_time_label(?string $createdAt): string
 {
     if (empty($createdAt)) {
@@ -327,6 +451,7 @@ function list_activity_meta(string $activityType, string $method, string $status
             'bank' => ['icon_class' => 'fas fa-university', 'bg' => 'rgba(59, 130, 246, 0.12)', 'color' => '#3b82f6', 'label' => 'Bank Deposit'],
             'card' => ['icon_class' => 'fas fa-credit-card', 'bg' => 'rgba(16, 185, 129, 0.12)', 'color' => '#10b981', 'label' => 'Card Deposit'],
             'apple' => ['icon_class' => 'fab fa-apple', 'bg' => 'rgba(17, 24, 39, 0.10)', 'color' => 'var(--text-primary)', 'label' => 'Apple Pay Deposit'],
+            'contact_payment_received' => ['icon_class' => 'fas fa-arrow-down', 'bg' => 'rgba(59, 130, 246, 0.12)', 'color' => '#3b82f6', 'label' => 'Contact Payment Received'],
         ];
 
         $meta = $map[$safeMethod] ?? ['icon_class' => 'fas fa-arrow-down', 'bg' => 'var(--icon-bg-default)', 'color' => 'var(--text-primary)', 'label' => 'Deposit'];
@@ -349,7 +474,8 @@ function list_activity_meta(string $activityType, string $method, string $status
 
 $activities = array_merge(
     list_fetch_deposit_activities($dbc, $userId, $limit),
-    list_fetch_withdrawal_activities($dbc, $userId, $limit)
+    list_fetch_withdrawal_activities($dbc, $userId, $limit),
+    list_fetch_contact_payment_activities($dbc, $userId, $limit)
 );
 
 usort($activities, function (array $a, array $b): int {

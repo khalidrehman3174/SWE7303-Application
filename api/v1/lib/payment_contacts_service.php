@@ -353,6 +353,18 @@ function payment_contacts_send_payment(mysqli $dbc, int $userId, int $contactId,
         ];
     }
 
+    $availableBalancePayload = finpay_get_available_balance_gbp($dbc, $userId);
+    $availableAmount = (float)($availableBalancePayload['amount'] ?? 0.0);
+    $availableSource = (string)($availableBalancePayload['source'] ?? 'none');
+
+    if ($availableAmount < $amount) {
+        return [
+            'ok' => false,
+            'code' => 'insufficient_balance',
+            'message' => 'Insufficient GBP balance for this payment.',
+        ];
+    }
+
     $cleanNote = trim(mb_substr($note, 0, 255));
 
     $contactStmt = mysqli_prepare($dbc, 'SELECT id, recipient_name FROM payment_contacts WHERE id = ? AND user_id = ? LIMIT 1');
@@ -380,59 +392,38 @@ function payment_contacts_send_payment(mysqli $dbc, int $userId, int $contactId,
     mysqli_begin_transaction($dbc);
 
     try {
-        $walletStmt = mysqli_prepare($dbc, 'SELECT id, balance FROM wallets WHERE user_id = ? AND symbol = ? LIMIT 1 FOR UPDATE');
-        if (!$walletStmt) {
-            throw new RuntimeException('wallet_lookup_prepare_failed');
-        }
-        $symbol = 'GBP';
-        mysqli_stmt_bind_param($walletStmt, 'is', $userId, $symbol);
-        mysqli_stmt_execute($walletStmt);
-        $walletResult = mysqli_stmt_get_result($walletStmt);
-        $walletRow = $walletResult ? mysqli_fetch_assoc($walletResult) : null;
-        mysqli_stmt_close($walletStmt);
-
-        if (!$walletRow) {
-            $createWalletStmt = mysqli_prepare($dbc, 'INSERT INTO wallets (user_id, symbol, balance) VALUES (?, ?, 0)');
-            if (!$createWalletStmt) {
-                throw new RuntimeException('wallet_create_prepare_failed');
-            }
-            mysqli_stmt_bind_param($createWalletStmt, 'is', $userId, $symbol);
-            mysqli_stmt_execute($createWalletStmt);
-            mysqli_stmt_close($createWalletStmt);
-
+        if (strpos($availableSource, 'wallet') === 0) {
             $walletStmt = mysqli_prepare($dbc, 'SELECT id, balance FROM wallets WHERE user_id = ? AND symbol = ? LIMIT 1 FOR UPDATE');
             if (!$walletStmt) {
-                throw new RuntimeException('wallet_relookup_prepare_failed');
+                throw new RuntimeException('wallet_lookup_prepare_failed');
             }
+
+            $symbol = 'GBP';
             mysqli_stmt_bind_param($walletStmt, 'is', $userId, $symbol);
             mysqli_stmt_execute($walletStmt);
             $walletResult = mysqli_stmt_get_result($walletStmt);
             $walletRow = $walletResult ? mysqli_fetch_assoc($walletResult) : null;
             mysqli_stmt_close($walletStmt);
-        }
 
-        if (!$walletRow) {
-            throw new RuntimeException('wallet_missing');
-        }
+            if (!$walletRow || (float)$walletRow['balance'] < $amount) {
+                mysqli_rollback($dbc);
+                return [
+                    'ok' => false,
+                    'code' => 'insufficient_balance',
+                    'message' => 'Insufficient GBP balance for this payment.',
+                ];
+            }
 
-        $walletId = (int)$walletRow['id'];
-        $walletBalance = (float)$walletRow['balance'];
-        if ($walletBalance < $amount) {
-            mysqli_rollback($dbc);
-            return [
-                'ok' => false,
-                'code' => 'insufficient_balance',
-                'message' => 'Insufficient GBP balance for this payment.',
-            ];
-        }
+            $walletId = (int)$walletRow['id'];
+            $debitStmt = mysqli_prepare($dbc, 'UPDATE wallets SET balance = balance - ? WHERE id = ? LIMIT 1');
+            if (!$debitStmt) {
+                throw new RuntimeException('wallet_debit_prepare_failed');
+            }
 
-        $debitStmt = mysqli_prepare($dbc, 'UPDATE wallets SET balance = balance - ? WHERE id = ? LIMIT 1');
-        if (!$debitStmt) {
-            throw new RuntimeException('wallet_debit_prepare_failed');
+            mysqli_stmt_bind_param($debitStmt, 'di', $amount, $walletId);
+            mysqli_stmt_execute($debitStmt);
+            mysqli_stmt_close($debitStmt);
         }
-        mysqli_stmt_bind_param($debitStmt, 'di', $amount, $walletId);
-        mysqli_stmt_execute($debitStmt);
-        mysqli_stmt_close($debitStmt);
 
         $txStmt = mysqli_prepare($dbc, 'INSERT INTO payment_contact_transactions (user_id, contact_id, direction, amount, note) VALUES (?, ?, ?, ?, ?)');
         if (!$txStmt) {

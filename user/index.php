@@ -262,6 +262,135 @@ function dashboard_fetch_withdrawal_activities(mysqli $dbc, int $userId, int $li
     return $items;
 }
 
+function dashboard_fetch_contact_payment_activities(mysqli $dbc, int $userId, int $limit): array
+{
+    if (!finpay_balance_table_exists($dbc, 'payment_contact_transactions')) {
+        return [];
+    }
+
+    $txColumns = finpay_balance_table_columns($dbc, 'payment_contact_transactions');
+    if (empty($txColumns)) {
+        return [];
+    }
+
+    $txIdCol = dashboard_first_existing_column($txColumns, ['id']);
+    $txUserCol = dashboard_first_existing_column($txColumns, ['user_id']);
+    $txContactCol = dashboard_first_existing_column($txColumns, ['contact_id']);
+    $txDirectionCol = dashboard_first_existing_column($txColumns, ['direction']);
+    $txAmountCol = dashboard_first_existing_column($txColumns, ['amount']);
+    $txNoteCol = dashboard_first_existing_column($txColumns, ['note']);
+    $txCreatedCol = dashboard_first_existing_column($txColumns, ['created_at']);
+
+    if ($txIdCol === null || $txUserCol === null || $txContactCol === null || $txDirectionCol === null || $txAmountCol === null || $txCreatedCol === null) {
+        return [];
+    }
+
+    $withdrawalRefMap = [];
+    if (finpay_balance_table_exists($dbc, 'withdrawals')) {
+        $wColumns = finpay_balance_table_columns($dbc, 'withdrawals');
+        $wUserCol = dashboard_first_existing_column($wColumns, ['user_id']);
+        $wMethodCol = dashboard_first_existing_column($wColumns, ['method', 'type', 'transaction_type', 'category', 'source', 'reason']);
+        $wCurrencyCol = dashboard_first_existing_column($wColumns, ['currency', 'fiat_currency', 'asset']);
+        $wStatusCol = dashboard_first_existing_column($wColumns, ['status', 'state']);
+        $wReferenceCol = dashboard_first_existing_column($wColumns, ['reference', 'payment_reference', 'note', 'narration']);
+
+        if ($wUserCol !== null && $wMethodCol !== null && $wCurrencyCol !== null && $wStatusCol !== null && $wReferenceCol !== null) {
+            $wSql = "SELECT {$wReferenceCol} AS reference
+                     FROM withdrawals
+                     WHERE {$wUserCol} = ?
+                       AND LOWER(CAST({$wMethodCol} AS CHAR)) = 'contact_payment'
+                       AND UPPER({$wCurrencyCol}) = 'GBP'
+                       AND LOWER({$wStatusCol}) = 'completed'";
+            $wStmt = mysqli_prepare($dbc, $wSql);
+            if ($wStmt) {
+                mysqli_stmt_bind_param($wStmt, 'i', $userId);
+                mysqli_stmt_execute($wStmt);
+                $wResult = mysqli_stmt_get_result($wStmt);
+                if ($wResult) {
+                    while ($wRow = mysqli_fetch_assoc($wResult)) {
+                        $ref = trim((string)($wRow['reference'] ?? ''));
+                        if ($ref !== '') {
+                            $withdrawalRefMap[$ref] = true;
+                        }
+                    }
+                }
+                mysqli_stmt_close($wStmt);
+            }
+        }
+    }
+
+    $sql = "SELECT tx.*, pc.recipient_name, pc.account_number
+            FROM payment_contact_transactions tx
+            LEFT JOIN payment_contacts pc
+              ON pc.id = tx.{$txContactCol}
+             AND pc.user_id = tx.{$txUserCol}
+            WHERE tx.{$txUserCol} = ?
+            ORDER BY tx.{$txCreatedCol} DESC
+            LIMIT ?";
+    $stmt = mysqli_prepare($dbc, $sql);
+    if (!$stmt) {
+        return [];
+    }
+
+    mysqli_stmt_bind_param($stmt, 'ii', $userId, $limit);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    $items = [];
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $txId = (int)($row[$txIdCol] ?? 0);
+            if ($txId <= 0) {
+                continue;
+            }
+
+            $contactId = (int)($row[$txContactCol] ?? 0);
+            $reference = 'CP-' . $userId . '-' . $contactId . '-' . $txId;
+            if (isset($withdrawalRefMap[$reference])) {
+                continue;
+            }
+
+            $direction = strtolower(trim((string)($row[$txDirectionCol] ?? 'sent')));
+            $isSent = $direction !== 'received';
+            $name = dashboard_clamp_contact_name((string)($row['recipient_name'] ?? ''), 48);
+            $masked = dashboard_mask_account_number((string)($row['account_number'] ?? ''));
+            $displayLabel = $isSent ? ('Payment to ' . $name) : ('Payment from ' . $name);
+            $displayMethod = $name . ' (' . $masked . ')';
+
+            if ($txNoteCol !== null) {
+                $note = trim((string)($row[$txNoteCol] ?? ''));
+                if ($note !== '') {
+                    $displayMethod .= ' • ' . $note;
+                }
+            }
+
+            $amount = abs((float)($row[$txAmountCol] ?? 0.0));
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $items[] = [
+                'activity_id' => 'cp_tx_' . $txId,
+                'activity_type' => $isSent ? 'withdrawal' : 'deposit',
+                'method' => $isSent ? 'contact_payment' : 'contact_payment_received',
+                'method_raw' => $isSent ? 'contact_payment' : 'contact_payment_received',
+                'currency' => 'GBP',
+                'net_amount' => $amount,
+                'status' => 'completed',
+                'provider' => 'contact_payment',
+                'created_at' => (string)($row[$txCreatedCol] ?? ''),
+                'completed_at' => (string)($row[$txCreatedCol] ?? ''),
+                'reference' => $reference,
+                'display_label' => $displayLabel,
+                'display_method' => $displayMethod,
+            ];
+        }
+    }
+
+    mysqli_stmt_close($stmt);
+    return $items;
+}
+
 function dashboard_is_completed_status(string $status): bool
 {
     $normalized = strtolower(trim($status));
@@ -354,8 +483,9 @@ if (isset($dbc, $_SESSION['user_id'])) {
     $safeUserId = (int)$_SESSION['user_id'];
     $depositActivities = dashboard_fetch_deposit_activities($dbc, $safeUserId, 500);
     $withdrawalActivities = dashboard_fetch_withdrawal_activities($dbc, $safeUserId, 500);
+    $contactPaymentActivities = dashboard_fetch_contact_payment_activities($dbc, $safeUserId, 500);
 
-    $allActivities = array_merge($depositActivities, $withdrawalActivities);
+    $allActivities = array_merge($depositActivities, $withdrawalActivities, $contactPaymentActivities);
     usort($allActivities, function (array $a, array $b): int {
         $aTs = strtotime((string)($a['created_at'] ?? '')) ?: 0;
         $bTs = strtotime((string)($b['created_at'] ?? '')) ?: 0;
@@ -415,6 +545,7 @@ function dashboard_activity_meta(string $activityType, string $method, string $s
             'bank' => ['icon_class' => 'fas fa-university', 'bg' => 'rgba(59, 130, 246, 0.12)', 'color' => '#3b82f6', 'label' => 'Bank Deposit'],
             'card' => ['icon_class' => 'fas fa-credit-card', 'bg' => 'rgba(16, 185, 129, 0.12)', 'color' => '#10b981', 'label' => 'Card Deposit'],
             'apple' => ['icon_class' => 'fab fa-apple', 'bg' => 'rgba(17, 24, 39, 0.10)', 'color' => 'var(--text-primary)', 'label' => 'Apple Pay Deposit'],
+            'contact_payment_received' => ['icon_class' => 'fas fa-arrow-down', 'bg' => 'rgba(59, 130, 246, 0.12)', 'color' => '#3b82f6', 'label' => 'Contact Payment Received'],
         ];
 
         $meta = $map[$safeMethod] ?? ['icon_class' => 'fas fa-arrow-down', 'bg' => 'var(--icon-bg-default)', 'color' => 'var(--text-primary)', 'label' => 'Deposit'];
@@ -1047,6 +1178,11 @@ require_once 'templates/head.php';
         let isAppendingActivities = false;
         let activityPollTimer = null;
         let lastActivitySignature = '';
+        let lastActivityStatusMap = {};
+
+        const globalNotify = (window.finpayNotify && typeof window.finpayNotify === 'function')
+            ? window.finpayNotify
+            : null;
 
         const INITIAL_ACTIVITY_BATCH = 15;
         const NEXT_ACTIVITY_BATCH = 6;
@@ -1056,6 +1192,25 @@ require_once 'templates/head.php';
             if (!el) return;
             el.textContent = message;
             el.style.color = isError ? '#ef4444' : 'var(--text-secondary)';
+        }
+
+        function notifyActivity(message, type = 'info', title = 'Activity', duration = 3200) {
+            if (globalNotify) {
+                globalNotify(message, {
+                    type,
+                    title,
+                    duration,
+                });
+            }
+
+            window.dispatchEvent(new CustomEvent('finpay:activity', {
+                detail: {
+                    kind: type,
+                    title,
+                    message,
+                    important: true,
+                }
+            }));
         }
 
         async function apiCall(path, method = 'GET', body = null) {
@@ -1173,6 +1328,7 @@ require_once 'templates/head.php';
             const amount = parseFloat(document.getElementById('depositAmount').value || '0');
             if (!amount || amount <= 0) {
                 setFeedback('depositFeedback', 'Enter a valid amount.', true);
+                notifyActivity('Enter a valid deposit amount.', 'warning', 'Deposit Validation');
                 return;
             }
 
@@ -1193,6 +1349,7 @@ require_once 'templates/head.php';
                 setTimeout(() => {
                     if (selectedMethod === 'bank') {
                         setFeedback('depositFeedback', `Deposit created: ${deposit.deposit_id}. Use your bank details to complete transfer.`);
+                        notifyActivity(`Bank deposit ${deposit.deposit_id} created. Complete transfer with your bank details.`, 'info', 'Deposit Created');
                         const modal = new bootstrap.Offcanvas(document.getElementById('accountDetailsModal'));
                         modal.show();
                     } else if (selectedMethod === 'card') {
@@ -1206,26 +1363,31 @@ require_once 'templates/head.php';
                                 throw new Error('Stripe publishable key is missing or invalid.');
                             }
                             setFeedback('cardDepositFeedback', `Deposit ${deposit.deposit_id} is ready. Confirm card payment.`);
+                            notifyActivity(`Card deposit ${deposit.deposit_id} is ready for secure confirmation.`, 'info', 'Card Deposit Ready');
                         } else {
                             setFeedback('cardDepositFeedback', `Mock mode: Deposit ${deposit.deposit_id} is ready. Click Pay Securely to complete sandbox settlement.`);
+                            notifyActivity(`Sandbox card deposit ${deposit.deposit_id} is ready to confirm.`, 'info', 'Card Deposit Ready');
                         }
                         const modal = new bootstrap.Offcanvas(document.getElementById('cardDepositModal'));
                         modal.show();
                     } else if (selectedMethod === 'apple') {
                         document.getElementById('applePayAmountDisplay').innerText = amount;
                         setFeedback('depositFeedback', `Deposit completed: ${deposit.deposit_id}`);
+                        notifyActivity(`Apple Pay deposit ${deposit.deposit_id} completed successfully.`, 'success', 'Deposit Complete');
                         const modal = new bootstrap.Modal(document.getElementById('applePayModal'));
                         modal.show();
                     }
                 }, 300);
             } catch (err) {
                 setFeedback('depositFeedback', err.message || 'Deposit failed.', true);
+                notifyActivity(err.message || 'Deposit failed.', 'error', 'Deposit Failed', 4200);
             }
         }
 
         async function submitCardDeposit() {
             if (!activeCardDepositId) {
                 setFeedback('cardDepositFeedback', 'No active card deposit found.', true);
+                notifyActivity('No active card deposit found. Start a new card deposit first.', 'warning', 'Card Deposit');
                 return;
             }
 
@@ -1259,6 +1421,7 @@ require_once 'templates/head.php';
                 }
 
                 setFeedback('cardDepositFeedback', `Deposit ${activeCardDepositId} completed.`);
+                notifyActivity(`Card deposit ${activeCardDepositId} completed successfully.`, 'success', 'Deposit Complete');
 
                 const cardModalEl = document.getElementById('cardDepositModal');
                 const cardModal = bootstrap.Offcanvas.getInstance(cardModalEl);
@@ -1267,6 +1430,7 @@ require_once 'templates/head.php';
                 }
             } catch (err) {
                 setFeedback('cardDepositFeedback', err.message || 'Could not confirm card payment.', true);
+                notifyActivity(err.message || 'Could not confirm card payment.', 'error', 'Card Deposit Failed', 4200);
             } finally {
                 payBtn.disabled = false;
                 payBtn.textContent = 'Pay Securely';
@@ -1539,6 +1703,52 @@ require_once 'templates/head.php';
             if (wdrProgressEl) wdrProgressEl.style.width = `${(analytics.monthWithdrawals / totalFlow) * 100}%`;
         }
 
+        function emitImportantActivityUpdates(nextAll) {
+            if (!Array.isArray(nextAll)) {
+                return;
+            }
+
+            const nextMap = {};
+            nextAll.forEach((item) => {
+                const id = String(item.activity_id || '');
+                const status = String(item.status_raw || '').toLowerCase();
+                if (id !== '') {
+                    nextMap[id] = status;
+                }
+            });
+
+            const isFirstSync = Object.keys(lastActivityStatusMap).length === 0;
+            if (isFirstSync) {
+                lastActivityStatusMap = nextMap;
+                return;
+            }
+
+            nextAll.forEach((item) => {
+                const id = String(item.activity_id || '');
+                if (id === '') {
+                    return;
+                }
+
+                const current = String(item.status_raw || '').toLowerCase();
+                const previous = String(lastActivityStatusMap[id] || '');
+                if (previous === '' || previous === current) {
+                    return;
+                }
+
+                const label = String(item.label || item.activity_type || 'Activity');
+                const amount = String(item.amount || '0.00');
+                const currency = String(item.currency || 'GBP');
+
+                if (current.includes('complete') || current.includes('settled') || current.includes('success') || current.includes('approved')) {
+                    notifyActivity(label + ' settled: ' + currency + ' ' + amount, 'success', 'Activity Settled');
+                } else if (current.includes('fail') || current.includes('reverse') || current.includes('expired')) {
+                    notifyActivity(label + ' ended with status ' + current + '.', 'error', 'Activity Update', 4200);
+                }
+            });
+
+            lastActivityStatusMap = nextMap;
+        }
+
             function applyRealtimeBalance(balance) {
                 if (!balance || typeof balance !== 'object') {
                     return;
@@ -1570,6 +1780,8 @@ require_once 'templates/head.php';
                 if (signature === lastActivitySignature) {
                     return;
                 }
+
+                emitImportantActivityUpdates(nextAll);
 
                 lastActivitySignature = signature;
                 ALL_ACTIVITIES = nextAll;
