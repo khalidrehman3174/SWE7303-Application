@@ -63,13 +63,13 @@ $generated_phrase = implode(' ', $generated_words);
             margin: 20px 0;
         }
         .word-chip {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
             padding: 8px;
             text-align: center;
             font-size: 14px;
-            color: #fff;
+            color: #0f172a;
             position: relative;
         }
         .word-number {
@@ -83,8 +83,9 @@ $generated_phrase = implode(' ', $generated_words);
         .blur-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(11, 11, 15, 0.85);
-            backdrop-filter: blur(5px);
+            background: rgba(248, 250, 252, 0.92);
+            border: 1px solid #e2e8f0;
+            backdrop-filter: blur(3px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -94,11 +95,11 @@ $generated_phrase = implode(' ', $generated_words);
             transition: opacity 0.3s;
         }
         .reveal-btn {
-            background: var(--primary-brand);
+            background: #111827;
             color: white;
             border: none;
             padding: 10px 20px;
-            border-radius: 50px;
+            border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
         }
@@ -144,8 +145,8 @@ $generated_phrase = implode(' ', $generated_words);
                 <input type="hidden" name="phrase" value="<?php echo $generated_phrase; ?>">
                 
                 <div class="form-check mb-4">
-                    <input class="form-check-input shadow-none" type="checkbox" id="savedCheck" required style="cursor: pointer; background-color: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);">
-                    <label class="form-check-label small text-white-50" for="savedCheck">
+                    <input class="form-check-input shadow-none" type="checkbox" id="savedCheck" required style="cursor: pointer; background-color: #fff; border-color: #cbd5e1;">
+                    <label class="form-check-label small text-muted" for="savedCheck">
                         I have written down my recovery phrase in a safe place.
                     </label>
                 </div>

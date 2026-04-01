@@ -72,8 +72,18 @@ textarea:focus-visible {
 }
 
 /* Auth forms should remain stable without hover lift/glow. */
-body.auth-body .form-box:hover {
-    box-shadow: var(--polish-shadow-sm);
+body.auth-body .form-box,
+body.auth-body .auth-form-layout {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    backdrop-filter: none;
+}
+
+body.auth-body .form-box:hover,
+body.auth-body .auth-form-layout:hover {
+    box-shadow: none;
     transform: none;
 }
 

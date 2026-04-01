@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 3rem 2rem;
             overflow-y: auto;
         }
-        .form-box {
+        .auth-form-layout {
             width: 100%;
             max-width: 400px;
             animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -265,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .input-wrap:focus-within i.field-icon { color: var(--black); }
 
-        .form-box:hover {
+        .auth-form-layout:hover {
             box-shadow: none;
             transform: none;
         }
@@ -434,7 +434,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- ── Right Form Panel ── -->
         <div class="form-panel">
-            <div class="form-box">
+            <div class="auth-form-layout">
 
                 <div class="mobile-logo">
                     <div style="width:10px;height:10px;background:#00d26a;border-radius:50%;"></div>

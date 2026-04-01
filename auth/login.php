@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 3rem 2rem;
             overflow-y: auto;
         }
-        .form-box {
+        .auth-form-layout {
             width: 100%;
             max-width: 400px;
         }
@@ -273,14 +273,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .input-wrap i { z-index: 1; pointer-events: none; }
 
         /* Keep the login surface integrated instead of floating like a separate card */
-        .form-box {
+        .auth-form-layout {
             background: transparent;
             border: 0;
             box-shadow: none;
             padding: 0;
             backdrop-filter: none;
         }
-        .form-box:hover {
+        .auth-form-layout:hover {
             box-shadow: none;
             transform: none;
         }
@@ -405,7 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             from { opacity: 0; transform: translateY(20px); }
             to   { opacity: 1; transform: translateY(0); }
         }
-        .form-box { animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+        .auth-form-layout { animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
     </style>
 </head>
 <body>
@@ -455,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- ── Right Form Panel ── -->
         <div class="form-panel">
-            <div class="form-box">
+            <div class="auth-form-layout">
 
                 <!-- Mobile-only logo -->
                 <div class="mobile-logo">
