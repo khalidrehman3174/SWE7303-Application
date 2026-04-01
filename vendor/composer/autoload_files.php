@@ -6,6 +6,8 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'a626201e4406003b96eee958a069f504' => $vendorDir . '/bitwasp/bech32/src/bech32.php',
     '6124b4c8570aa390c21fafd04a26c69f' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/deep_copy.php',
+    '1536679ae7c22724ce9f5b059d3d9f6a' => $vendorDir . '/protonlabs/bitcoin/src/Script/functions.php',
     'ec07570ca5a812141189b1fa81503674' => $vendorDir . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
 );

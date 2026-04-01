@@ -6,6 +6,7 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'CoinParams\\CoinParams' => $vendorDir . '/dan-da/coinparams/bindings/php/CoinParams.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'PHPUnit\\Event\\Application\\Finished' => $vendorDir . '/phpunit/phpunit/src/Event/Events/Application/Finished.php',
     'PHPUnit\\Event\\Application\\FinishedSubscriber' => $vendorDir . '/phpunit/phpunit/src/Event/Events/Application/FinishedSubscriber.php',
@@ -1232,4 +1233,7 @@ return array(
     'TheSeer\\Tokenizer\\XMLSerializer' => $vendorDir . '/theseer/tokenizer/src/XMLSerializer.php',
     'staabm\\SideEffectsDetector\\SideEffect' => $vendorDir . '/staabm/side-effects-detector/lib/SideEffect.php',
     'staabm\\SideEffectsDetector\\SideEffectsDetector' => $vendorDir . '/staabm/side-effects-detector/lib/SideEffectsDetector.php',
+    'strictmode\\initializer' => $vendorDir . '/dan-da/strictmode-php/strictmode.php',
+    'texttable' => $vendorDir . '/dan-da/texttable-php/texttable.class.php',
+    'texttable_markdown' => $vendorDir . '/dan-da/texttable-php/texttable_markdown.class.php',
 );

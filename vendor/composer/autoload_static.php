@@ -7,11 +7,21 @@ namespace Composer\Autoload;
 class ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b
 {
     public static $files = array (
+        'a626201e4406003b96eee958a069f504' => __DIR__ . '/..' . '/bitwasp/bech32/src/bech32.php',
         '6124b4c8570aa390c21fafd04a26c69f' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/deep_copy.php',
+        '1536679ae7c22724ce9f5b059d3d9f6a' => __DIR__ . '/..' . '/protonlabs/bitcoin/src/Script/functions.php',
         'ec07570ca5a812141189b1fa81503674' => __DIR__ . '/..' . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
     );
 
     public static $prefixLengthsPsr4 = array (
+        'l' =>
+        array (
+            'lastguest\\' => 10,
+        ),
+        'k' =>
+        array (
+            'kornrunner\\' => 11,
+        ),
         'S' =>
         array (
             'Stripe\\' => 7,
@@ -20,13 +30,40 @@ class ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b
         array (
             'PhpParser\\' => 10,
         ),
+        'M' =>
+        array (
+            'Mdanter\\Ecc\\' => 12,
+        ),
+        'F' =>
+        array (
+            'FG\\' => 3,
+        ),
         'D' =>
         array (
+            'Derive\\' => 7,
             'DeepCopy\\' => 9,
+        ),
+        'C' =>
+        array (
+            'Composer\\Semver\\' => 16,
+        ),
+        'B' =>
+        array (
+            'BitWasp\\Buffertools\\' => 20,
+            'BitWasp\\Bitcoin\\' => 16,
+            'BitWasp\\Bech32\\' => 15,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'lastguest\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/lastguest/murmurhash/src/lastguest',
+        ),
+        'kornrunner\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/olegabr/keccak/src',
+        ),
         'Stripe\\' =>
         array (
             0 => __DIR__ . '/..' . '/stripe/stripe-php/lib',
@@ -35,13 +72,52 @@ class ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b
         array (
             0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
         ),
+        'Mdanter\\Ecc\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/shanecurran/phpecc/src',
+        ),
+        'FG\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/fgrosse/phpasn1/lib',
+        ),
+        'Derive\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/mediumc/derive/src',
+        ),
         'DeepCopy\\' =>
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
         ),
+        'Composer\\Semver\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/composer/semver/src',
+        ),
+        'BitWasp\\Buffertools\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/protonlabs/buffertools/src/Buffertools',
+        ),
+        'BitWasp\\Bitcoin\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/protonlabs/bitcoin/src',
+        ),
+        'BitWasp\\Bech32\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/bitwasp/bech32/src',
+        ),
+    );
+
+    public static $prefixesPsr0 = array (
+        'P' =>
+        array (
+            'Pleo' =>
+            array (
+                0 => __DIR__ . '/..' . '/pleonasm/merkle-tree/src',
+            ),
+        ),
     );
 
     public static $classMap = array (
+        'CoinParams\\CoinParams' => __DIR__ . '/..' . '/dan-da/coinparams/bindings/php/CoinParams.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'PHPUnit\\Event\\Application\\Finished' => __DIR__ . '/..' . '/phpunit/phpunit/src/Event/Events/Application/Finished.php',
         'PHPUnit\\Event\\Application\\FinishedSubscriber' => __DIR__ . '/..' . '/phpunit/phpunit/src/Event/Events/Application/FinishedSubscriber.php',
@@ -1268,6 +1344,9 @@ class ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b
         'TheSeer\\Tokenizer\\XMLSerializer' => __DIR__ . '/..' . '/theseer/tokenizer/src/XMLSerializer.php',
         'staabm\\SideEffectsDetector\\SideEffect' => __DIR__ . '/..' . '/staabm/side-effects-detector/lib/SideEffect.php',
         'staabm\\SideEffectsDetector\\SideEffectsDetector' => __DIR__ . '/..' . '/staabm/side-effects-detector/lib/SideEffectsDetector.php',
+        'strictmode\\initializer' => __DIR__ . '/..' . '/dan-da/strictmode-php/strictmode.php',
+        'texttable' => __DIR__ . '/..' . '/dan-da/texttable-php/texttable.class.php',
+        'texttable_markdown' => __DIR__ . '/..' . '/dan-da/texttable-php/texttable_markdown.class.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
@@ -1275,6 +1354,7 @@ class ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b
         return \Closure::bind(function () use ($loader) {
             $loader->prefixLengthsPsr4 = ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b::$prefixLengthsPsr4;
             $loader->prefixDirsPsr4 = ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b::$prefixesPsr0;
             $loader->classMap = ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b::$classMap;
 
         }, null, ClassLoader::class);

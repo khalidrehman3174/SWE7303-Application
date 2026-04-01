@@ -1,0 +1,1 @@
+Library for obtaining bip32 addresses and private keys. Completely cut out CLI interaction and removed unnecessary functions and classes.

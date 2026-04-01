@@ -6,7 +6,16 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'lastguest\\' => array($vendorDir . '/lastguest/murmurhash/src/lastguest'),
+    'kornrunner\\' => array($vendorDir . '/olegabr/keccak/src'),
     'Stripe\\' => array($vendorDir . '/stripe/stripe-php/lib'),
     'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
+    'Mdanter\\Ecc\\' => array($vendorDir . '/shanecurran/phpecc/src'),
+    'FG\\' => array($vendorDir . '/fgrosse/phpasn1/lib'),
+    'Derive\\' => array($vendorDir . '/mediumc/derive/src'),
     'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
+    'Composer\\Semver\\' => array($vendorDir . '/composer/semver/src'),
+    'BitWasp\\Buffertools\\' => array($vendorDir . '/protonlabs/buffertools/src/Buffertools'),
+    'BitWasp\\Bitcoin\\' => array($vendorDir . '/protonlabs/bitcoin/src'),
+    'BitWasp\\Bech32\\' => array($vendorDir . '/bitwasp/bech32/src'),
 );
