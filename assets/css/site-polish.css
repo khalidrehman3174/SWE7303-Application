@@ -71,6 +71,12 @@ textarea:focus-visible {
     box-shadow: var(--polish-shadow-md);
 }
 
+/* Auth forms should remain stable without hover lift/glow. */
+body.auth-body .form-box:hover {
+    box-shadow: var(--polish-shadow-sm);
+    transform: none;
+}
+
 /* User app refinements */
 .asset-row:hover {
     transform: translateY(-1px);
