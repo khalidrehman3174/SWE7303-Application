@@ -1,39 +1,46 @@
 /* auth-modern.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-    --bg-auth-dark: #0b0b0f;
+    --bg-auth-dark: #09090b;
     --bg-auth-darker: #050507;
     --primary-brand: #00d26a;
     --primary-brand-rgb: 0, 210, 106;
-    --text-main: #ffffff;
-    --text-muted: rgba(255, 255, 255, 0.5);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-surface: rgba(255, 255, 255, 0.03);
-    --input-surface: rgba(0, 0, 0, 0.2);
+    --text-main: #0f172a;
+    --text-muted: #6b7280;
+    --panel-border: #e4e4e7;
+    --input-surface: #fafafa;
 }
 
 /* GLOBAL RESET FOR AUTH PAGES */
 body.auth-body {
     padding-left: 0 !important; /* Critical: Remove global desktop sidebar padding */
     margin: 0 !important;
-    background-color: var(--bg-auth-dark) !important;
+    background-color: #ffffff !important;
     color: var(--text-main);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Outfit', sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+/* Left auth brand surface to mirror login/signup split style */
+body.auth-body::before {
+    content: '';
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 50%;
+    background: radial-gradient(circle at 20% 10%, rgba(var(--primary-brand-rgb), 0.28), transparent 52%), var(--bg-auth-dark);
+    z-index: -3;
 }
 
 /* Background Effects */
 .auth-background {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    background: radial-gradient(circle at 50% -20%, rgba(var(--primary-brand-rgb), 0.15), transparent 70%);
+    inset: 0;
+    z-index: -2;
+    background: radial-gradient(ellipse at 80% 0%, rgba(var(--primary-brand-rgb), 0.08) 0%, transparent 45%);
     pointer-events: none;
 }
 
@@ -56,25 +63,24 @@ body.auth-body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    padding: 20px;
-    width: 100%;
-    max-width: 100%;
+    padding: 2.6rem;
+    width: 50%;
+    margin-left: auto;
 }
 
 .auth-card {
     width: 100%;
     max-width: 420px;
-    background: var(--glass-surface);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
-    border-radius: 24px;
-    padding: 40px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
     position: relative;
     overflow: hidden;
+    margin: 0 auto;
 }
 
 /* Top Logo Area */
@@ -86,7 +92,7 @@ body.auth-body {
 .logo-icon {
     width: 56px;
     height: 56px;
-    background: rgba(var(--primary-brand-rgb), 0.1);
+    background: rgba(var(--primary-brand-rgb), 0.12);
     color: var(--primary-brand);
     border-radius: 16px;
     display: inline-flex;
@@ -98,15 +104,16 @@ body.auth-body {
 }
 
 .auth-title {
-    font-weight: 700;
-    font-size: 24px;
+    font-weight: 900;
+    font-size: 2rem;
+    letter-spacing: -1px;
     margin-bottom: 0.5rem;
-    letter-spacing: -0.5px;
 }
 
 .auth-subtitle {
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 0.95rem;
+    font-weight: 500;
 }
 
 /* Form Elements */
@@ -116,11 +123,10 @@ body.auth-body {
 
 .modern-label {
     display: block;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 700;
     margin-bottom: 8px;
-    color: var(--text-muted);
-    margin-left: 4px;
+    color: #1f2937;
 }
 
 .modern-input-wrapper {
@@ -132,7 +138,7 @@ body.auth-body {
     left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--text-muted);
+    color: #a1a1aa;
     font-size: 16px;
     transition: color 0.3s;
 }
@@ -140,19 +146,19 @@ body.auth-body {
 .modern-input {
     width: 100%;
     background: var(--input-surface);
-    border: 1px solid var(--glass-border);
+    border: 1.5px solid var(--panel-border);
     border-radius: 14px;
     padding: 14px 16px 14px 48px; /* Left padding for icon */
-    color: #fff;
+    color: #09090b;
     font-size: 15px;
     transition: all 0.3s ease;
     outline: none;
 }
 
 .modern-input:focus {
-    background: rgba(0, 0, 0, 0.4);
-    border-color: var(--primary-brand);
-    box-shadow: 0 0 0 4px rgba(var(--primary-brand-rgb), 0.1);
+    background: #fff;
+    border-color: #09090b;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04);
 }
 
 .modern-input:focus + .modern-input-icon {
@@ -161,23 +167,23 @@ body.auth-body {
 
 .modern-btn {
     width: 100%;
-    background: var(--primary-brand);
-    color: #000;
-    font-weight: 600;
-    padding: 16px;
+    background: #09090b;
+    color: #fff;
+    font-weight: 700;
+    padding: 14px;
     border: none;
-    border-radius: 14px;
+    border-radius: 999px;
     font-size: 16px;
     cursor: pointer;
     transition: all 0.3s;
     margin-top: 1rem;
-    box-shadow: 0 10px 20px rgba(var(--primary-brand-rgb), 0.2);
+    box-shadow: none;
 }
 
 .modern-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 15px 30px rgba(var(--primary-brand-rgb), 0.3);
-    background: #00e074;
+    transform: scale(0.985);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.14);
+    background: #1c1c1e;
 }
 
 .modern-btn:active {
@@ -187,14 +193,15 @@ body.auth-body {
 .auth-links {
     margin-top: 2rem;
     text-align: center;
-    font-size: 14px;
+    font-size: 0.9rem;
     color: var(--text-muted);
+    font-weight: 500;
 }
 
 .auth-link-highlight {
-    color: var(--primary-brand);
+    color: #09090b;
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 700;
     margin-left: 5px;
     transition: opacity 0.2s;
 }
@@ -208,7 +215,7 @@ body.auth-body {
     position: absolute;
     top: 30px;
     left: 30px;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     font-size: 14px;
     display: flex;
@@ -238,8 +245,18 @@ body.auth-body {
 
 /* Mobile Optimizations */
 @media (max-width: 480px) {
+    body.auth-body::before {
+        display: none;
+    }
+
+    .auth-container {
+        width: 100%;
+        margin-left: 0;
+        padding: 20px;
+    }
+
     .auth-card {
-        padding: 30px 20px;
+        padding: 30px 0;
         background: transparent;
         border: none;
         box-shadow: none;

@@ -265,20 +265,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .input-wrap:focus-within i.field-icon { color: var(--black); }
 
-        .pw-toggle {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--gray-400);
-            font-size: 0.9rem;
-            padding: 0;
-            transition: color 0.2s;
+        .form-box:hover {
+            box-shadow: none;
+            transform: none;
         }
-        .pw-toggle:hover { color: var(--black); }
 
         /* Password Strength */
         .pw-strength {
@@ -485,9 +475,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="input-wrap">
                             <input type="password" id="password" name="password" placeholder="Min. 8 characters" required autocomplete="new-password" minlength="8" oninput="checkStrength(this.value)">
                             <i class="fas fa-lock field-icon"></i>
-                            <button type="button" class="pw-toggle" id="togglePw" aria-label="Show password">
-                                <i class="far fa-eye" id="pw-eye"></i>
-                            </button>
                         </div>
                         <div class="pw-strength" id="pwStrength">
                             <div class="pw-bar" id="bar1"></div>
@@ -521,16 +508,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-        // Password visibility toggle
-        const togglePw = document.getElementById('togglePw');
-        const pwField  = document.getElementById('password');
-        const pwEye    = document.getElementById('pw-eye');
-        togglePw.addEventListener('click', () => {
-            const isText = pwField.type === 'text';
-            pwField.type = isText ? 'password' : 'text';
-            pwEye.className = isText ? 'far fa-eye' : 'far fa-eye-slash';
-        });
-
         // Password strength meter
         function checkStrength(val) {
             const bars   = [bar1, bar2, bar3, bar4];
