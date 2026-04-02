@@ -16,6 +16,55 @@ function crypto_withdrawal_service_tracking_txid(string $reference, string $symb
     return hash('sha256', $reference . '|' . strtoupper($symbol));
 }
 
+function crypto_withdrawal_service_verify_user_password(mysqli $dbc, int $userId, string $password): array
+{
+    if ($userId <= 0) {
+        return [
+            'ok' => false,
+            'code' => 'invalid_user',
+            'message' => 'Invalid user for withdrawal.',
+        ];
+    }
+
+    if (trim($password) === '') {
+        return [
+            'ok' => false,
+            'code' => 'password_required',
+            'message' => 'Enter your password to confirm this withdrawal.',
+        ];
+    }
+
+    $stmt = mysqli_prepare($dbc, 'SELECT password FROM users WHERE id = ? LIMIT 1');
+    if (!$stmt) {
+        return [
+            'ok' => false,
+            'code' => 'password_check_failed',
+            'message' => 'Could not verify your password. Please try again.',
+        ];
+    }
+
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $row = $result ? mysqli_fetch_assoc($result) : null;
+    mysqli_stmt_close($stmt);
+
+    $hash = is_array($row) ? (string)($row['password'] ?? '') : '';
+    if ($hash === '' || !password_verify($password, $hash)) {
+        return [
+            'ok' => false,
+            'code' => 'invalid_password',
+            'message' => 'Incorrect password. Withdrawal was not submitted.',
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'code' => 'password_verified',
+        'message' => 'Password verified.',
+    ];
+}
+
 function crypto_withdrawal_service_get_status(mysqli $dbc, int $userId, string $reference): array
 {
     if ($userId <= 0) {

@@ -1174,6 +1174,11 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                     <input id="withdrawAmountInput" class="transfer-input" type="number" min="0" step="0.000001" placeholder="0.00">
                 </div>
 
+                <div class="transfer-field">
+                    <label class="transfer-label">Account Password</label>
+                    <input id="withdrawPasswordInput" class="transfer-input" type="password" autocomplete="current-password" placeholder="Enter your login password">
+                </div>
+
                 <div class="transfer-summary">
                     <span>Estimated network fee</span>
                     <span id="withdrawFeeText">--</span>
@@ -2035,6 +2040,7 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                     if (withdrawFeeText) withdrawFeeText.textContent = '--';
                     if (withdrawAddressInput) withdrawAddressInput.value = '';
                     if (withdrawAmountInput) withdrawAmountInput.value = '';
+                    if (withdrawPasswordInput) withdrawPasswordInput.value = '';
                     hideInlineNetworkWarning(withdrawWarningBox);
                     withdrawWarningAfterConfirm = null;
                     if (withdrawReviewBtn) {
@@ -2232,6 +2238,7 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                 var withdrawReviewBtn = document.getElementById('withdrawReviewBtn');
                 var withdrawAddressInput = document.getElementById('withdrawAddressInput');
                 var withdrawAmountInput = document.getElementById('withdrawAmountInput');
+                var withdrawPasswordInput = document.getElementById('withdrawPasswordInput');
                 var notify = (window.finpayNotify && typeof window.finpayNotify === 'function')
                     ? window.finpayNotify
                     : function (message) { alert(message); };
@@ -2239,9 +2246,10 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                     withdrawReviewBtn.addEventListener('click', function () {
                         var address = withdrawAddressInput ? withdrawAddressInput.value.trim() : '';
                         var amount = withdrawAmountInput ? parseFloat(withdrawAmountInput.value) : 0;
+                        var password = withdrawPasswordInput ? withdrawPasswordInput.value : '';
 
-                        if (!address || amount <= 0) {
-                            notify('Enter a valid address and amount before continuing.', {
+                        if (!address || amount <= 0 || !password) {
+                            notify('Enter address, amount, and your password before continuing.', {
                                 type: 'warning',
                                 title: 'Withdrawal Validation'
                             });
@@ -2269,7 +2277,8 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                                 asset: cfg.asset,
                                 network: selectedWithdrawNetwork.id,
                                 address: address,
-                                amount: amount
+                                amount: amount,
+                                password: password
                             })
                         })
                         .then(function (response) {
@@ -2371,6 +2380,9 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                             }
                             if (withdrawAmountInput) {
                                 withdrawAmountInput.value = '';
+                            }
+                            if (withdrawPasswordInput) {
+                                withdrawPasswordInput.value = '';
                             }
                         })
                         .catch(function (error) {

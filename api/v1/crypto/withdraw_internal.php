@@ -14,6 +14,12 @@ $asset = isset($body['asset']) ? (string)$body['asset'] : '';
 $network = isset($body['network']) ? (string)$body['network'] : '';
 $address = isset($body['address']) ? (string)$body['address'] : '';
 $amount = isset($body['amount']) ? (float)$body['amount'] : 0.0;
+$password = isset($body['password']) ? (string)$body['password'] : '';
+
+$passwordCheck = crypto_withdrawal_service_verify_user_password($dbc, $userId, $password);
+if (!$passwordCheck['ok']) {
+    api_json_response(422, false, (string)$passwordCheck['code'], (string)$passwordCheck['message']);
+}
 
 $result = crypto_withdrawal_service_internal_debit($dbc, $userId, $asset, $network, $address, $amount);
 
