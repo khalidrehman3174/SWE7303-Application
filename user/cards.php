@@ -35,9 +35,20 @@ function cards_ensure_schema(mysqli $dbc): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
+function cards_users_has_column(mysqli $dbc, string $column): bool
+{
+    $safeColumn = mysqli_real_escape_string($dbc, $column);
+    $result = mysqli_query($dbc, "SHOW COLUMNS FROM users LIKE '{$safeColumn}'");
+    return ($result instanceof mysqli_result) && mysqli_num_rows($result) > 0;
+}
+
 function cards_fetch_user_profile(mysqli $dbc, int $uid): ?array
 {
-    $stmt = mysqli_prepare($dbc, 'SELECT username, full_name FROM users WHERE id = ? LIMIT 1');
+    $profileSql = cards_users_has_column($dbc, 'full_name')
+        ? 'SELECT username, full_name FROM users WHERE id = ? LIMIT 1'
+        : 'SELECT username, NULL AS full_name FROM users WHERE id = ? LIMIT 1';
+
+    $stmt = mysqli_prepare($dbc, $profileSql);
     if (!$stmt) {
         return null;
     }

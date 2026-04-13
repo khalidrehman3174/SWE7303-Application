@@ -1060,6 +1060,15 @@ $availableNetworks = $assetNetworks[$asset] ?? [
             background: rgba(255, 255, 255, 0.66);
         }
 
+        body.withdraw-authorize-open .modal-backdrop.show {
+            z-index: 10590;
+            background-color: rgba(7, 14, 24, 0.56);
+        }
+
+        #withdrawAuthorizeModal.show {
+            background-color: rgba(7, 14, 24, 0.56);
+        }
+
         @media (max-width: 768px) {
             .transfer-flow {
                 padding-bottom: 8rem !important;
@@ -1174,11 +1183,6 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                     <input id="withdrawAmountInput" class="transfer-input" type="number" min="0" step="0.000001" placeholder="0.00">
                 </div>
 
-                <div class="transfer-field">
-                    <label class="transfer-label">Account Password</label>
-                    <input id="withdrawPasswordInput" class="transfer-input" type="password" autocomplete="current-password" placeholder="Enter your login password">
-                </div>
-
                 <div class="transfer-summary">
                     <span>Estimated network fee</span>
                     <span id="withdrawFeeText">--</span>
@@ -1229,6 +1233,29 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                         <span>Don't show again</span>
                     </label>
                     <button id="withdrawNetworkConfirmBtn" type="button" class="btn-pro btn-pro-primary" style="width: 100%;"><i class="fas fa-check"></i> Got it</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="withdrawAuthorizeModal" tabindex="-1" aria-labelledby="withdrawAuthorizeModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 10600;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--panel-bg, var(--bg-surface)); border: 1px solid var(--border-light); color: var(--text-primary); border-radius: 16px;">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-light);">
+                    <h5 class="modal-title" id="withdrawAuthorizeModalLabel" style="font-weight: 700;">Authorize Withdrawal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: var(--text-secondary); font-size: 0.92rem;">Enter your account password to confirm this withdrawal request.</p>
+                    <div class="transfer-field mb-0">
+                        <label class="transfer-label" for="withdrawAuthorizePasswordInput">Account Password</label>
+                        <input id="withdrawAuthorizePasswordInput" class="transfer-input" type="password" autocomplete="current-password" placeholder="Enter your login password">
+                    </div>
+                    <div id="withdrawAuthorizeError" class="mt-3 d-none" style="color: #dc3545; font-size: 0.86rem;"></div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-light);">
+                    <button type="button" class="btn-pro btn-pro-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="withdrawAuthorizeSubmitBtn" class="btn-pro btn-pro-primary"><i class="fas fa-lock"></i> Confirm & Submit</button>
                 </div>
             </div>
         </div>
@@ -2030,6 +2057,7 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                     clearWithdrawProcessingTimers();
                     withdrawCurrentReference = '';
                     withdrawSubmittedAtMs = 0;
+                    pendingWithdrawalRequest = null;
                     selectedWithdrawNetwork = null;
                     renderWithdrawNetworks();
                     if (withdrawStep3) withdrawStep3.classList.add('d-none');
@@ -2040,9 +2068,15 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                     if (withdrawFeeText) withdrawFeeText.textContent = '--';
                     if (withdrawAddressInput) withdrawAddressInput.value = '';
                     if (withdrawAmountInput) withdrawAmountInput.value = '';
-                    if (withdrawPasswordInput) withdrawPasswordInput.value = '';
                     hideInlineNetworkWarning(withdrawWarningBox);
                     withdrawWarningAfterConfirm = null;
+                    if (withdrawAuthorizeModal && withdrawAuthorizeModalEl && withdrawAuthorizeModalEl.classList.contains('show')) {
+                        withdrawAuthorizeModal.hide();
+                    }
+                    if (withdrawAuthorizePasswordInput) {
+                        withdrawAuthorizePasswordInput.value = '';
+                    }
+                    setWithdrawAuthorizeError('');
                     if (withdrawReviewBtn) {
                         withdrawReviewBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Review Withdrawal';
                     }
@@ -2238,18 +2272,169 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                 var withdrawReviewBtn = document.getElementById('withdrawReviewBtn');
                 var withdrawAddressInput = document.getElementById('withdrawAddressInput');
                 var withdrawAmountInput = document.getElementById('withdrawAmountInput');
-                var withdrawPasswordInput = document.getElementById('withdrawPasswordInput');
+                var withdrawAuthorizeModalEl = document.getElementById('withdrawAuthorizeModal');
+                var withdrawAuthorizePasswordInput = document.getElementById('withdrawAuthorizePasswordInput');
+                var withdrawAuthorizeError = document.getElementById('withdrawAuthorizeError');
+                var withdrawAuthorizeSubmitBtn = document.getElementById('withdrawAuthorizeSubmitBtn');
+                var withdrawAuthorizeModal = (withdrawAuthorizeModalEl && window.bootstrap && window.bootstrap.Modal)
+                    ? window.bootstrap.Modal.getOrCreateInstance(withdrawAuthorizeModalEl)
+                    : null;
+                var pendingWithdrawalRequest = null;
                 var notify = (window.finpayNotify && typeof window.finpayNotify === 'function')
                     ? window.finpayNotify
                     : function (message) { alert(message); };
+
+                function setWithdrawAuthorizeError(message) {
+                    if (!withdrawAuthorizeError) {
+                        return;
+                    }
+                    var text = String(message || '').trim();
+                    withdrawAuthorizeError.textContent = text;
+                    withdrawAuthorizeError.classList.toggle('d-none', text === '');
+                }
+
+                function submitWithdrawalRequest(password) {
+                    if (!pendingWithdrawalRequest || !selectedWithdrawNetwork || !selectedWithdrawNetwork.id) {
+                        throw new Error('Withdrawal session expired. Please review the request again.');
+                    }
+
+                    var address = pendingWithdrawalRequest.address;
+                    var amount = pendingWithdrawalRequest.amount;
+
+                    return fetch('../api/v1/crypto/withdraw_internal.php', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            asset: cfg.asset,
+                            network: selectedWithdrawNetwork.id,
+                            address: address,
+                            amount: amount,
+                            password: password
+                        })
+                    })
+                    .then(function (response) {
+                        return response.text().then(function (raw) {
+                            var payload;
+                            try {
+                                payload = JSON.parse(raw);
+                            } catch (e) {
+                                throw new Error('Withdrawal API returned invalid JSON');
+                            }
+
+                            if (!response.ok || !payload || payload.success !== true || !payload.data) {
+                                throw new Error(payload && payload.message ? payload.message : 'Unable to process withdrawal');
+                            }
+
+                            return payload.data;
+                        });
+                    })
+                    .then(function (data) {
+                        var balance = data.balance || {};
+                        var newAmount = Number(balance.amount || 0);
+                        var displayAmount = (cfg.asset === 'GBP')
+                            ? newAmount.toFixed(2)
+                            : newAmount.toFixed(6).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+
+                        cfg.balance = newAmount;
+                        cfg.balanceDisplay = displayAmount;
+
+                        var cryptoBalanceEl = document.getElementById('crypto-balance');
+                        if (cryptoBalanceEl) {
+                            cryptoBalanceEl.setAttribute('data-amount', String(newAmount));
+                            cryptoBalanceEl.textContent = displayAmount + ' ' + cfg.asset;
+                        }
+
+                        var mobileHoldingEl = document.querySelector('.asset-mobile-holding-value');
+                        if (mobileHoldingEl) {
+                            mobileHoldingEl.textContent = displayAmount + ' ' + cfg.asset;
+                        }
+
+                        var sublineEls = document.querySelectorAll('.transfer-subline');
+                        sublineEls.forEach(function (el) {
+                            if (el && el.textContent && el.textContent.indexOf('Balance:') === 0) {
+                                el.textContent = 'Balance: ' + displayAmount + ' ' + cfg.asset;
+                            }
+                        });
+
+                        var withdrawal = data.withdrawal || {};
+                        var receipt = {
+                            reference: withdrawal.reference || '',
+                            amount_display: withdrawal.amount_display || amount.toFixed(6),
+                            network: withdrawal.network || (selectedWithdrawNetwork ? selectedWithdrawNetwork.id : ''),
+                            address: withdrawal.address || address,
+                            tracking_txid: withdrawal.tracking_txid || '',
+                            status: withdrawal.status || 'processing',
+                            submitted_at: withdrawal.submitted_at || new Date().toISOString(),
+                            eta: withdrawal.eta || '5-20 minutes'
+                        };
+
+                        if (withdrawAuthorizeModal) {
+                            withdrawAuthorizeModal.hide();
+                        }
+                        if (withdrawAuthorizePasswordInput) {
+                            withdrawAuthorizePasswordInput.value = '';
+                        }
+                        setWithdrawAuthorizeError('');
+
+                        notify('Withdrawal submitted. It is now in processing queue.', {
+                            type: 'success',
+                            title: 'Withdrawal Submitted'
+                        });
+                        pushAlert('success', 'Withdrawal Submitted', cfg.asset + ' withdrawal is now in processing queue.');
+                        pushHistory('withdrawal', 'Withdrawal Submitted', receipt.amount_display + ' ' + cfg.asset + ' to ' + shortAddress(receipt.address), {
+                            source: 'withdrawals',
+                            status: String(receipt.status || 'processing').toUpperCase(),
+                            amount: '-' + receipt.amount_display + ' ' + cfg.asset,
+                            method: selectedWithdrawNetwork ? selectedWithdrawNetwork.name : '--',
+                            reference: receipt.reference || '--',
+                            time: receipt.submitted_at || nowIso(),
+                            asset: cfg.asset,
+                        });
+
+                        window.dispatchEvent(new CustomEvent('finpay:activity', {
+                            detail: {
+                                kind: 'info',
+                                title: 'Withdrawal',
+                                message: cfg.asset + ' withdrawal submitted for processing.',
+                                asset: cfg.asset,
+                                symbol: cfg.asset,
+                                source: 'asset_details',
+                                details: {
+                                    source: 'withdrawals',
+                                    status: String(receipt.status || 'processing').toUpperCase(),
+                                    amount: '-' + receipt.amount_display + ' ' + cfg.asset,
+                                    method: selectedWithdrawNetwork ? selectedWithdrawNetwork.name : '--',
+                                    reference: receipt.reference || '--',
+                                    time: receipt.submitted_at || nowIso(),
+                                    asset: cfg.asset,
+                                },
+                                important: true
+                            }
+                        }));
+
+                        showWithdrawProcessingStep(receipt);
+
+                        if (withdrawAddressInput) {
+                            withdrawAddressInput.value = '';
+                        }
+                        if (withdrawAmountInput) {
+                            withdrawAmountInput.value = '';
+                        }
+                        pendingWithdrawalRequest = null;
+                    });
+                }
+
                 if (withdrawReviewBtn) {
                     withdrawReviewBtn.addEventListener('click', function () {
                         var address = withdrawAddressInput ? withdrawAddressInput.value.trim() : '';
                         var amount = withdrawAmountInput ? parseFloat(withdrawAmountInput.value) : 0;
-                        var password = withdrawPasswordInput ? withdrawPasswordInput.value : '';
 
-                        if (!address || amount <= 0 || !password) {
-                            notify('Enter address, amount, and your password before continuing.', {
+                        if (!address || amount <= 0) {
+                            notify('Enter address and amount before continuing.', {
                                 type: 'warning',
                                 title: 'Withdrawal Validation'
                             });
@@ -2264,169 +2449,74 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                             return;
                         }
 
-                        withdrawReviewBtn.disabled = true;
+                        pendingWithdrawalRequest = {
+                            address: address,
+                            amount: amount
+                        };
 
-                        fetch('../api/v1/crypto/withdraw_internal.php', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                asset: cfg.asset,
-                                network: selectedWithdrawNetwork.id,
-                                address: address,
-                                amount: amount,
-                                password: password
-                            })
-                        })
-                        .then(function (response) {
-                            return response.text().then(function (raw) {
-                                var payload;
-                                try {
-                                    payload = JSON.parse(raw);
-                                } catch (e) {
-                                    throw new Error('Withdrawal API returned invalid JSON');
-                                }
+                        setWithdrawAuthorizeError('');
+                        if (withdrawAuthorizePasswordInput) {
+                            withdrawAuthorizePasswordInput.value = '';
+                            withdrawAuthorizePasswordInput.focus();
+                        }
 
-                                if (!response.ok || !payload || payload.success !== true || !payload.data) {
-                                    throw new Error(payload && payload.message ? payload.message : 'Unable to process withdrawal');
-                                }
-
-                                return payload.data;
-                            });
-                        })
-                        .then(function (data) {
-                            var balance = data.balance || {};
-                            var newAmount = Number(balance.amount || 0);
-                            var displayAmount = (cfg.asset === 'GBP')
-                                ? newAmount.toFixed(2)
-                                : newAmount.toFixed(6).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
-
-                            cfg.balance = newAmount;
-                            cfg.balanceDisplay = displayAmount;
-
-                            var cryptoBalanceEl = document.getElementById('crypto-balance');
-                            if (cryptoBalanceEl) {
-                                cryptoBalanceEl.setAttribute('data-amount', String(newAmount));
-                                cryptoBalanceEl.textContent = displayAmount + ' ' + cfg.asset;
-                            }
-
-                            var mobileHoldingEl = document.querySelector('.asset-mobile-holding-value');
-                            if (mobileHoldingEl) {
-                                mobileHoldingEl.textContent = displayAmount + ' ' + cfg.asset;
-                            }
-
-                            var sublineEls = document.querySelectorAll('.transfer-subline');
-                            sublineEls.forEach(function (el) {
-                                if (el && el.textContent && el.textContent.indexOf('Balance:') === 0) {
-                                    el.textContent = 'Balance: ' + displayAmount + ' ' + cfg.asset;
-                                }
-                            });
-
-                            var withdrawal = data.withdrawal || {};
-                            var receipt = {
-                                reference: withdrawal.reference || '',
-                                amount_display: withdrawal.amount_display || amount.toFixed(6),
-                                network: withdrawal.network || (selectedWithdrawNetwork ? selectedWithdrawNetwork.id : ''),
-                                address: withdrawal.address || address,
-                                tracking_txid: withdrawal.tracking_txid || '',
-                                status: withdrawal.status || 'processing',
-                                submitted_at: withdrawal.submitted_at || new Date().toISOString(),
-                                eta: withdrawal.eta || '5-20 minutes'
-                            };
-
-                            notify('Withdrawal submitted. It is now in processing queue.', {
-                                type: 'success',
-                                title: 'Withdrawal Submitted'
-                            });
-                            pushAlert('success', 'Withdrawal Submitted', cfg.asset + ' withdrawal is now in processing queue.');
-                            pushHistory('withdrawal', 'Withdrawal Submitted', receipt.amount_display + ' ' + cfg.asset + ' to ' + shortAddress(receipt.address), {
-                                source: 'withdrawals',
-                                status: String(receipt.status || 'processing').toUpperCase(),
-                                amount: '-' + receipt.amount_display + ' ' + cfg.asset,
-                                method: selectedWithdrawNetwork ? selectedWithdrawNetwork.name : '--',
-                                reference: receipt.reference || '--',
-                                time: receipt.submitted_at || nowIso(),
-                                asset: cfg.asset,
-                            });
-
-                            window.dispatchEvent(new CustomEvent('finpay:activity', {
-                                detail: {
-                                    kind: 'info',
-                                    title: 'Withdrawal',
-                                    message: cfg.asset + ' withdrawal submitted for processing.',
-                                    asset: cfg.asset,
-                                    symbol: cfg.asset,
-                                    source: 'asset_details',
-                                    details: {
-                                        source: 'withdrawals',
-                                        status: String(receipt.status || 'processing').toUpperCase(),
-                                        amount: '-' + receipt.amount_display + ' ' + cfg.asset,
-                                        method: selectedWithdrawNetwork ? selectedWithdrawNetwork.name : '--',
-                                        reference: receipt.reference || '--',
-                                        time: receipt.submitted_at || nowIso(),
-                                        asset: cfg.asset,
-                                    },
-                                    important: true
-                                }
-                            }));
-
-                            showWithdrawProcessingStep(receipt);
-
-                            if (withdrawAddressInput) {
-                                withdrawAddressInput.value = '';
-                            }
-                            if (withdrawAmountInput) {
-                                withdrawAmountInput.value = '';
-                            }
-                            if (withdrawPasswordInput) {
-                                withdrawPasswordInput.value = '';
-                            }
-                        })
-                        .catch(function (error) {
-                            var msg = (error && error.message) ? String(error.message) : 'Could not process withdrawal';
-                            notify(msg, {
+                        if (withdrawAuthorizeModal) {
+                            withdrawAuthorizeModal.show();
+                        } else {
+                            notify('Authorization modal is unavailable. Please refresh and try again.', {
                                 type: 'error',
                                 title: 'Withdrawal Failed',
                                 duration: 4200
                             });
-                            pushAlert('error', 'Withdrawal Failed', msg);
-                            pushHistory('withdrawal_error', 'Withdrawal Failed', msg, {
-                                source: 'withdrawals',
-                                status: 'FAILED',
-                                amount: '--',
-                                method: selectedWithdrawNetwork ? selectedWithdrawNetwork.name : '--',
-                                reference: '--',
-                                time: nowIso(),
-                                asset: cfg.asset,
-                            });
+                        }
+                    });
+                }
 
-                            window.dispatchEvent(new CustomEvent('finpay:activity', {
-                                detail: {
-                                    kind: 'error',
-                                    title: 'Withdrawal',
-                                    message: msg,
-                                    asset: cfg.asset,
-                                    symbol: cfg.asset,
-                                    source: 'asset_details',
-                                    details: {
-                                        source: 'withdrawals',
-                                        status: 'FAILED',
-                                        amount: '--',
-                                        method: selectedWithdrawNetwork ? selectedWithdrawNetwork.name : '--',
-                                        reference: '--',
-                                        time: nowIso(),
-                                        asset: cfg.asset,
-                                    },
-                                    important: true
-                                }
-                            }));
-                        })
-                        .finally(function () {
-                            withdrawReviewBtn.disabled = false;
-                        });
+                if (withdrawAuthorizeSubmitBtn) {
+                    withdrawAuthorizeSubmitBtn.addEventListener('click', function () {
+                        var password = withdrawAuthorizePasswordInput ? String(withdrawAuthorizePasswordInput.value || '') : '';
+                        if (!password.trim()) {
+                            setWithdrawAuthorizeError('Enter your account password to continue.');
+                            if (withdrawAuthorizePasswordInput) {
+                                withdrawAuthorizePasswordInput.focus();
+                            }
+                            return;
+                        }
+
+                        withdrawAuthorizeSubmitBtn.disabled = true;
+                        submitWithdrawalRequest(password)
+                            .catch(function (error) {
+                                var msg = (error && error.message) ? String(error.message) : 'Could not process withdrawal';
+                                setWithdrawAuthorizeError(msg);
+                            })
+                            .finally(function () {
+                                withdrawAuthorizeSubmitBtn.disabled = false;
+                            });
+                    });
+                }
+
+                if (withdrawAuthorizePasswordInput) {
+                    withdrawAuthorizePasswordInput.addEventListener('keydown', function (event) {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            if (withdrawAuthorizeSubmitBtn && !withdrawAuthorizeSubmitBtn.disabled) {
+                                withdrawAuthorizeSubmitBtn.click();
+                            }
+                        }
+                    });
+                }
+
+                if (withdrawAuthorizeModalEl) {
+                    withdrawAuthorizeModalEl.addEventListener('shown.bs.modal', function () {
+                        document.body.classList.add('withdraw-authorize-open');
+                    });
+
+                    withdrawAuthorizeModalEl.addEventListener('hidden.bs.modal', function () {
+                        document.body.classList.remove('withdraw-authorize-open');
+                        setWithdrawAuthorizeError('');
+                        if (withdrawAuthorizePasswordInput) {
+                            withdrawAuthorizePasswordInput.value = '';
+                        }
                     });
                 }
 

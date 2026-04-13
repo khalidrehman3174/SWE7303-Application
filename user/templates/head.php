@@ -342,6 +342,7 @@ if(!isset($pageTitle)) $pageTitle = 'FinPay Pro';
             });
         });
     </script>
+    <script src="../assets/js/platform-loading.js"></script>
     <script src="../assets/js/platform-feedback.js"></script>
 </head>
 <body>

@@ -171,5 +171,6 @@ $generated_phrase = implode(' ', $generated_words);
             return confirm("Are you sure you have saved these words? You cannot view them again.");
         }
     </script>
+    <script src="../assets/js/platform-loading.js"></script>
 </body>
 </html>

@@ -528,6 +528,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             label.style.color = colors[score];
         }
     </script>
+    <script src="../assets/js/platform-loading.js"></script>
 
 </body>
 </html>

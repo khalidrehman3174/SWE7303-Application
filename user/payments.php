@@ -372,7 +372,7 @@ require_once 'templates/head.php';
                     <div data-bs-dismiss="modal" style="cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--list-bg); transition: background 0.2s;"><i class="fas fa-times"></i></div>
                 </div>
                 <div class="modal-body" style="padding: 1.5rem;">
-                    <form method="POST" action="" id="newPaymentForm" novalidate>
+                    <form method="POST" action="" id="newPaymentForm" novalidate data-no-loading>
                     <div class="mb-3">
                         <label class="form-label text-secondary" style="font-size: 0.85rem; font-weight: 500;">Recipient Name</label>
                         <input type="text" name="recipient_name" value="<?php echo htmlspecialchars($formRecipientName, ENT_QUOTES, 'UTF-8'); ?>" class="form-control" placeholder="e.g. John Doe" maxlength="<?php echo (int)$recipientNameMaxLength; ?>" required style="background: var(--list-bg); border: 1px solid var(--border-light); border-radius: 12px; padding: 12px; color: var(--text-primary); font-family: 'Outfit', sans-serif;">
@@ -402,7 +402,7 @@ require_once 'templates/head.php';
                     <div data-bs-dismiss="modal" style="cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--list-bg); transition: background 0.2s;"><i class="fas fa-times"></i></div>
                 </div>
                 <div class="modal-body" style="padding: 1.5rem;">
-                    <form method="POST" action="" id="editContactForm" novalidate>
+                    <form method="POST" action="" id="editContactForm" novalidate data-no-loading>
                     <input type="hidden" name="contact_id" id="editContactId" value="0">
                     <div class="mb-3">
                         <label class="form-label text-secondary" style="font-size: 0.85rem; font-weight: 500;">Recipient Name</label>
@@ -435,7 +435,7 @@ require_once 'templates/head.php';
                 <div class="modal-body" style="padding: 1.5rem;">
                     <p style="margin-bottom: 0.6rem; color: var(--text-primary);">Remove <strong id="deleteContactNameText">this contact</strong> from your saved list?</p>
                     <p style="margin: 0 0 1.25rem; color: var(--text-secondary); font-size: 0.9rem;">This only deletes the saved contact and does not affect previous payments.</p>
-                    <form method="POST" action="" id="deleteContactForm">
+                    <form method="POST" action="" id="deleteContactForm" data-no-loading>
                         <input type="hidden" name="contact_id" id="deleteContactId" value="0">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <button type="button" class="btn-pro" data-bs-dismiss="modal" style="background: var(--list-bg); color: var(--text-primary); border: 1px solid var(--border-light);">Cancel</button>
