@@ -22,22 +22,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Please enter your email and password.";
     } else {
         $safe_email = mysqli_real_escape_string($dbc, $email);
-        $result = mysqli_query($dbc, "SELECT id, password, is_banned FROM users WHERE email = '$safe_email' LIMIT 1");
-        
-        if ($result && mysqli_num_rows($result) > 0) {
-            $row = mysqli_fetch_assoc($result);
-            if ((int)($row['is_banned'] ?? 0) === 1) {
-                $error = 'This account is closed or restricted. Please contact support.';
-            } elseif (password_verify($password, $row['password'])) {
-                $_SESSION['user_id'] = $row['id'];
-                header("Location: ../user/index.php");
-                exit;
-            } else {
-                $error = "Incorrect password. Please try again.";
-            }
-        } else {
-            $error = "No account found with that email.";
-        }
+        $result = mysqli_query($dbc, "SELECT id, password FROM users WHERE email = '$safe_email' LIMIT 1");
+
+if ($result && mysqli_num_rows($result) > 0) {
+    $row = mysqli_fetch_assoc($result);
+    if (password_verify($password, $row['password'])) {
+        $_SESSION['user_id'] = $row['id'];
+        header("Location: ../user/index.php");
+        exit;
+    } else {
+        $error = "Incorrect password. Please try again.";
+    }
+} else {
+    $error = "No account found with that email.";
+}
     }
 }
 ?>
