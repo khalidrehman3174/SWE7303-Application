@@ -162,7 +162,7 @@ require_once 'templates/head.php';
                     <div class="asset-icon" style="background: rgba(99, 102, 241, 0.1); color: #6366f1; border-radius: 12px;"><i class="fab fa-ethereum"></i></div>
                     <div class="asset-info ml-3">
                         <div class="asset-name" style="font-size: 1.05rem;">Ethereum <span style="font-size: 0.7rem; background: var(--hover-bg); padding: 3px 8px; border-radius: 6px; margin-left: 5px;">ETH</span></div>
-                        <div class="asset-sub">£2,910.30</div>
+                        <div class="asset-sub" id="price-ethereum">£2,910.30</div>
                     </div>
                     <div class="asset-value text-end">
                         <button class="btn btn-sm" style="background: var(--text-primary); color: var(--bg-body); border-radius: 100px; padding: 6px 16px; font-weight: 600; font-family: 'Outfit'; text-transform: uppercase;">Buy</button>
@@ -173,7 +173,7 @@ require_once 'templates/head.php';
                     <div class="asset-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 12px;"><i class="fas fa-coins" style="transform: skew(-10deg);"></i></div>
                     <div class="asset-info ml-3">
                         <div class="asset-name" style="font-size: 1.05rem;">Tether <span style="font-size: 0.7rem; background: var(--hover-bg); padding: 3px 8px; border-radius: 6px; margin-left: 5px;">USDT</span></div>
-                        <div class="asset-sub">£0.79</div>
+                        <div class="asset-sub" id="price-tether">£0.79</div>
                     </div>
                     <div class="asset-value text-end">
                         <button class="btn btn-sm" style="background: var(--text-primary); color: var(--bg-body); border-radius: 100px; padding: 6px 16px; font-weight: 600; font-family: 'Outfit'; text-transform: uppercase;">Buy</button>
@@ -184,7 +184,7 @@ require_once 'templates/head.php';
                     <div class="asset-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 12px;"><i class="fas fa-water"></i></div>
                     <div class="asset-info ml-3">
                         <div class="asset-name" style="font-size: 1.05rem;">Ripple <span style="font-size: 0.7rem; background: var(--hover-bg); padding: 3px 8px; border-radius: 6px; margin-left: 5px;">XRP</span></div>
-                        <div class="asset-sub">£0.48</div>
+                        <div class="asset-sub" id="price-ripple">£0.48</div>
                     </div>
                     <div class="asset-value text-end">
                         <button class="btn btn-sm" style="background: var(--text-primary); color: var(--bg-body); border-radius: 100px; padding: 6px 16px; font-weight: 600; font-family: 'Outfit'; text-transform: uppercase;">Buy</button>
@@ -206,15 +206,42 @@ require_once 'templates/head.php';
 fetch('/api/v1/crypto/prices.php')
   .then(response => response.json())
   .then(data => {
+
     const formatGBP = value => '£' + Number(value).toLocaleString('en-GB', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
 
-    const bitcoinEl = document.getElementById('price-bitcoin');
-    if (bitcoinEl && data.bitcoin?.gbp !== undefined) {
-      bitcoinEl.textContent = formatGBP(data.bitcoin.gbp);
+    if (data.bitcoin?.gbp !== undefined) {
+      const el = document.getElementById('price-bitcoin');
+      if (el) el.textContent = formatGBP(data.bitcoin.gbp);
     }
+
+    if (data.ethereum?.gbp !== undefined) {
+      const el = document.getElementById('price-ethereum');
+      if (el) el.textContent = formatGBP(data.ethereum.gbp);
+    }
+
+    if (data.tether?.gbp !== undefined) {
+      const el = document.getElementById('price-tether');
+      if (el) el.textContent = formatGBP(data.tether.gbp);
+    }
+
+    if (data.ripple?.gbp !== undefined) {
+      const el = document.getElementById('price-ripple');
+      if (el) el.textContent = formatGBP(data.ripple.gbp);
+    }
+
+    if (data.solana?.gbp !== undefined) {
+      const el = document.getElementById('price-solana');
+      if (el) el.textContent = formatGBP(data.solana.gbp);
+    }
+
+    if (data.binancecoin?.gbp !== undefined) {
+      const el = document.getElementById('price-bnb');
+      if (el) el.textContent = formatGBP(data.binancecoin.gbp);
+    }
+
   })
   .catch(error => {
     console.error('Crypto API error:', error);
