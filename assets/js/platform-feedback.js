@@ -233,9 +233,6 @@
 
         if (message && important) {
             if (detail.toast === false || shouldSuppressDuplicateToast(kind, title, message)) {
-                if (important) {
-                    playTone(kind);
-                }
                 return;
             }
 
