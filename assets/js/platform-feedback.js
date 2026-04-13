@@ -3,6 +3,13 @@
     var JOURNAL_KEY = 'finpay_activity_journal';
     var JOURNAL_MAX_ITEMS = 200;
     var soundEnabled = true;
+    var lastToastMeta = {
+        ts: 0,
+        title: '',
+        type: '',
+        message: ''
+    };
+    var TOAST_DEDUPE_WINDOW_MS = 1200;
 
     try {
         soundEnabled = localStorage.getItem(SOUND_PREF_KEY) !== '0';
@@ -110,6 +117,13 @@
             msgEl.textContent = String(message);
         }
 
+        lastToastMeta = {
+            ts: Date.now(),
+            title: title.toLowerCase(),
+            type: type,
+            message: String(message).trim().toLowerCase(),
+        };
+
         container.appendChild(toast);
         requestAnimationFrame(function () {
             toast.classList.add('show');
@@ -149,6 +163,23 @@
 
     window.finpayNotify = notify;
     window.finpayActivitySound = playTone;
+
+    function shouldSuppressDuplicateToast(kind, title, message) {
+        var now = Date.now();
+        if ((now - Number(lastToastMeta.ts || 0)) > TOAST_DEDUPE_WINDOW_MS) {
+            return false;
+        }
+
+        var normalizedKind = String(kind || 'info').toLowerCase();
+        var normalizedTitle = String(title || '').trim().toLowerCase();
+        var normalizedMessage = String(message || '').trim().toLowerCase();
+
+        var sameType = normalizedKind === String(lastToastMeta.type || '');
+        var sameTitle = normalizedTitle !== '' && normalizedTitle === String(lastToastMeta.title || '');
+        var sameMessage = normalizedMessage !== '' && normalizedMessage === String(lastToastMeta.message || '');
+
+        return sameMessage || (sameType && sameTitle);
+    }
 
     function readJournal() {
         try {
@@ -197,12 +228,20 @@
 
         var kind = String(detail.kind || detail.type || 'info').toLowerCase();
         var message = detail.message || '';
+        var title = detail.title || 'Activity';
         var important = detail.important !== false;
 
         if (message && important) {
+            if (detail.toast === false || shouldSuppressDuplicateToast(kind, title, message)) {
+                if (important) {
+                    playTone(kind);
+                }
+                return;
+            }
+
             notify(message, {
                 type: kind,
-                title: detail.title || 'Activity',
+                title: title,
                 duration: Number(detail.duration || 3200),
                 sound: detail.sound !== false,
             });

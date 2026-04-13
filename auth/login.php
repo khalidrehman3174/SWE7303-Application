@@ -513,5 +513,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </div>
 
+    <script src="../assets/js/platform-loading.js"></script>
+
 </body>
 </html>

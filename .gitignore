@@ -1,4 +1,5 @@
 todo.txt
+/docs/
 
 # Local secrets and environment overrides
 api/v1/lib/config.local.php
