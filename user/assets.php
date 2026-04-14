@@ -13,18 +13,19 @@ function assets_fetch_wallet_balance(mysqli $dbc, int $userId, string $symbol): 
         return 0.0;
     }
 
-    $stmt = mysqli_prepare($dbc, 'SELECT balance FROM wallets WHERE user_id = ? AND symbol = ? LIMIT 1');
+    $normalizedSymbol = strtoupper(trim($symbol));
+    $stmt = mysqli_prepare($dbc, 'SELECT COALESCE(SUM(balance), 0) AS total_balance FROM wallets WHERE user_id = ? AND UPPER(TRIM(symbol)) = ?');
     if (!$stmt) {
         return 0.0;
     }
 
-    mysqli_stmt_bind_param($stmt, 'is', $userId, $symbol);
+    mysqli_stmt_bind_param($stmt, 'is', $userId, $normalizedSymbol);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     $row = $result ? mysqli_fetch_assoc($result) : null;
     mysqli_stmt_close($stmt);
 
-    return (float)($row['balance'] ?? 0.0);
+    return (float)($row['total_balance'] ?? 0.0);
 }
 
 $btcAmount = assets_fetch_wallet_balance($dbc, $userId, 'BTC');
@@ -66,6 +67,7 @@ $gbpAmount = (float)($gbpBalancePayload['amount'] ?? 0.0);
                     <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 0.5rem; position: relative; z-index: 1;">Total Portfolio</div>
                     <div id="portfolioTotalText" style="font-size: 4rem; font-weight: 800; font-family: 'Outfit', sans-serif; line-height: 1; margin-bottom: 0.5rem; color: var(--text-primary); position: relative; z-index: 1;">£0<span style="font-size: 2.5rem; opacity: 0.5;">.00</span></div>
                     <div id="portfolioDeltaText" style="font-size: 1.05rem; font-weight: 600; color: var(--accent); position: relative; z-index: 1;"><i class="fas fa-arrow-up me-1"></i>£0.00 <span style="color: var(--text-secondary); font-weight: 500; font-size: 0.95rem;">Past 24h</span></div>
+                    <div id="portfolioCashText" style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600; margin-top: 0.45rem; position: relative; z-index: 1;">Cash Balance: £<?php echo number_format($gbpAmount, 2); ?></div>
                     
                     <div class="d-flex justify-content-center mt-4 position-relative z-1" style="max-width: 250px; margin: 0 auto;">
                         <button class="btn-pro btn-pro-primary w-100" data-bs-toggle="offcanvas" data-bs-target="#swapModal" style="border-radius: 14px; padding: 12px; font-weight: 700;"><i class="fas fa-exchange-alt text-accent me-2"></i> Swap Assets</button>
@@ -233,6 +235,7 @@ $gbpAmount = (float)($gbpBalancePayload['amount'] ?? 0.0);
                 BTC: <?php echo json_encode((float)$btcAmount, JSON_UNESCAPED_SLASHES); ?>,
                 ETH: <?php echo json_encode((float)$ethAmount, JSON_UNESCAPED_SLASHES); ?>
             };
+            var cashBalance = <?php echo json_encode((float)$gbpAmount, JSON_UNESCAPED_SLASHES); ?>;
 
             function formatGBP(value) {
                 return '£' + Number(value || 0).toLocaleString('en-GB', {
@@ -243,7 +246,7 @@ $gbpAmount = (float)($gbpBalancePayload['amount'] ?? 0.0);
 
             function formatAmount(value, symbol) {
                 return Number(value || 0).toLocaleString('en-GB', {
-                    minimumFractionDigits: 4,
+                    minimumFractionDigits: 6,
                     maximumFractionDigits: 6
                 }) + ' ' + symbol;
             }
@@ -312,6 +315,11 @@ $gbpAmount = (float)($gbpBalancePayload['amount'] ?? 0.0);
                     var positive = Number(deltaValue || 0) >= 0;
                     deltaText.style.color = positive ? 'var(--accent)' : '#ef4444';
                     deltaText.innerHTML = '<i class="fas ' + (positive ? 'fa-arrow-up' : 'fa-arrow-down') + ' me-1"></i>' + (positive ? '+' : '-') + formatGBP(Math.abs(deltaValue)).replace('£', '£') + ' <span style="color: var(--text-secondary); font-weight: 500; font-size: 0.95rem;">Past 24h</span>';
+                }
+
+                var cashText = document.getElementById('portfolioCashText');
+                if (cashText) {
+                    cashText.textContent = 'Cash Balance: ' + formatGBP(cashBalance);
                 }
             }
 
@@ -400,37 +408,22 @@ $gbpAmount = (float)($gbpBalancePayload['amount'] ?? 0.0);
 
             window.addEventListener('finpay:swap-completed', function (event) {
                 var detail = (event && event.detail) ? event.detail : {};
-                var payCurrency = String(detail.payCurrency || '').toUpperCase();
-                var receiveCurrency = String(detail.receiveCurrency || '').toUpperCase();
-                var payAmount = Number(detail.payAmount || 0);
-                var receiveAmount = Number(detail.receiveAmount || 0);
-
-                if (!Number.isFinite(payAmount) || !Number.isFinite(receiveAmount) || payAmount <= 0 || receiveAmount <= 0) {
+                var balances = detail && detail.balances && typeof detail.balances === 'object' ? detail.balances : null;
+                if (!balances) {
                     return;
                 }
 
-                if (payCurrency === 'BTC') {
-                    portfolio.BTC = Math.max(0, Number(portfolio.BTC || 0) - payAmount);
+                if (typeof balances.BTC !== 'undefined' && Number.isFinite(Number(balances.BTC))) {
+                    portfolio.BTC = Number(balances.BTC || 0);
                     window.assetSwapDefaults.btcAmount = portfolio.BTC;
                 }
-                if (payCurrency === 'ETH') {
-                    portfolio.ETH = Math.max(0, Number(portfolio.ETH || 0) - payAmount);
+                if (typeof balances.ETH !== 'undefined' && Number.isFinite(Number(balances.ETH))) {
+                    portfolio.ETH = Number(balances.ETH || 0);
                     window.assetSwapDefaults.ethAmount = portfolio.ETH;
                 }
-                if (payCurrency === 'GBP') {
-                    window.assetSwapDefaults.gbpAmount = Math.max(0, Number(window.assetSwapDefaults.gbpAmount || 0) - payAmount);
-                }
-
-                if (receiveCurrency === 'BTC') {
-                    portfolio.BTC = Number(portfolio.BTC || 0) + receiveAmount;
-                    window.assetSwapDefaults.btcAmount = portfolio.BTC;
-                }
-                if (receiveCurrency === 'ETH') {
-                    portfolio.ETH = Number(portfolio.ETH || 0) + receiveAmount;
-                    window.assetSwapDefaults.ethAmount = portfolio.ETH;
-                }
-                if (receiveCurrency === 'GBP') {
-                    window.assetSwapDefaults.gbpAmount = Number(window.assetSwapDefaults.gbpAmount || 0) + receiveAmount;
+                if (typeof balances.GBP !== 'undefined' && Number.isFinite(Number(balances.GBP))) {
+                    cashBalance = Number(balances.GBP || 0);
+                    window.assetSwapDefaults.gbpAmount = cashBalance;
                 }
 
                 fetchAndRender();

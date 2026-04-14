@@ -427,8 +427,6 @@
                 state.isSubmitting = true;
                 setActionState();
 
-                var executedAt = new Date().toISOString();
-                var reference = 'SWP-' + String(Date.now());
                 var payDisplay = order.payCurrency === 'GBP'
                     ? ('GBP ' + formatFiat(order.payAmount))
                     : (formatCrypto(order.payAmount) + ' ' + order.payCurrency);
@@ -436,53 +434,117 @@
                     ? ('GBP ' + formatFiat(order.receiveAmount))
                     : (formatCrypto(order.receiveAmount) + ' ' + order.receiveCurrency);
 
-                setTimeout(function () {
-                    applyBalanceUpdate(order);
-                    state.isSubmitting = false;
-                    setActionState();
-                    state.pendingOrder = null;
+                fetch('../api/v1/crypto/swap_internal.php', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        payCurrency: order.payCurrency,
+                        receiveCurrency: order.receiveCurrency,
+                        payAmount: Number(order.payAmount || 0),
+                        receiveAmount: Number(order.receiveAmount || 0),
+                        assetSymbol: state.asset.symbol
+                    })
+                })
+                    .then(function (response) {
+                        return response.text().then(function (raw) {
+                            var payload;
+                            try {
+                                payload = JSON.parse(raw);
+                            } catch (e) {
+                                throw new Error('Swap API returned invalid JSON.');
+                            }
 
-                    emitActivity(
-                        'success',
-                        'Swap Completed',
-                        'Successfully swapped ' + payDisplay + ' to ' + receiveDisplay + '.',
-                        true,
-                        {
+                            if (!response.ok || !payload || payload.success !== true) {
+                                throw new Error(payload && payload.message ? String(payload.message) : 'Swap could not be completed.');
+                            }
+
+                            return payload.data || {};
+                        });
+                    })
+                    .then(function (data) {
+                        var balances = data && data.balances ? data.balances : {};
+                        var normalizedBalances = {
+                            GBP: Number.isFinite(Number(balances.GBP)) ? Number(balances.GBP || 0) : state.balances.GBP,
+                            BTC: Number.isFinite(Number(balances.BTC)) ? Number(balances.BTC || 0) : state.balances.BTC,
+                            ETH: Number.isFinite(Number(balances.ETH)) ? Number(balances.ETH || 0) : state.balances.ETH,
+                        };
+
+                        state.balances.GBP = normalizedBalances.GBP;
+                        state.balances.BTC = normalizedBalances.BTC;
+                        state.balances.ETH = normalizedBalances.ETH;
+
+                        updateBalances();
+                        payInput.value = order.payCurrency === 'GBP' ? '0.00' : '0.000000';
+                        recalc();
+
+                        var swapMeta = data && data.swap ? data.swap : {};
+                        var reference = String(swapMeta.reference || ('SWP-' + String(Date.now())));
+                        var executedAt = String(swapMeta.executed_at || new Date().toISOString());
+
+                        emitActivity(
+                            'success',
+                            'Swap Completed',
+                            'Successfully swapped ' + payDisplay + ' to ' + receiveDisplay + '.',
+                            true,
+                            {
+                                source: 'swap_widget',
+                                asset: state.asset.symbol,
+                                symbol: state.asset.symbol,
+                                details: {
+                                    source: 'swaps',
+                                    status: 'COMPLETED',
+                                    amount: payDisplay + ' -> ' + receiveDisplay,
+                                    method: 'Instant Swap',
+                                    reference: reference,
+                                    time: executedAt,
+                                    asset: state.asset.symbol,
+                                }
+                            }
+                        );
+                        clearInlineError();
+
+                        try {
+                            window.dispatchEvent(new CustomEvent('finpay:swap-completed', {
+                                detail: {
+                                    payCurrency: order.payCurrency,
+                                    payAmount: order.payAmount,
+                                    receiveCurrency: order.receiveCurrency,
+                                    receiveAmount: order.receiveAmount,
+                                    asset: state.asset.symbol,
+                                    reference: reference,
+                                    executedAt: executedAt,
+                                    balances: normalizedBalances,
+                                }
+                            }));
+                        } catch (e) {
+                            // no-op
+                        }
+
+                        state.isSubmitting = false;
+                        state.pendingOrder = null;
+                        setActionState();
+
+                        if (reviewModalInstance) {
+                            state.returnToSwap = false;
+                            reviewModalInstance.hide();
+                        }
+                    })
+                    .catch(function (error) {
+                        state.isSubmitting = false;
+                        setActionState();
+
+                        var message = (error && error.message) ? String(error.message) : 'Swap could not be completed. Please try again.';
+                        setInlineError(message);
+                        emitActivity('error', 'Swap Error', message, true, {
                             source: 'swap_widget',
                             asset: state.asset.symbol,
                             symbol: state.asset.symbol,
-                            details: {
-                                source: 'swaps',
-                                status: 'COMPLETED',
-                                amount: payDisplay + ' -> ' + receiveDisplay,
-                                method: 'Instant Swap',
-                                reference: reference,
-                                time: executedAt,
-                                asset: state.asset.symbol,
-                            }
-                        }
-                    );
-                    clearInlineError();
-
-                    try {
-                        window.dispatchEvent(new CustomEvent('finpay:swap-completed', {
-                            detail: {
-                                payCurrency: order.payCurrency,
-                                payAmount: order.payAmount,
-                                receiveCurrency: order.receiveCurrency,
-                                receiveAmount: order.receiveAmount,
-                                asset: state.asset.symbol,
-                            }
-                        }));
-                    } catch (e) {
-                        // no-op
-                    }
-
-                    if (reviewModalInstance) {
-                        state.returnToSwap = true;
-                        reviewModalInstance.hide();
-                    }
-                }, 750);
+                        });
+                    });
             }
 
             function updateSelectors() {
