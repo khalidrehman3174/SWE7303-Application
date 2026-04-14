@@ -3,6 +3,7 @@ $pageTitle = 'FinPay Pro - Assets';
 $activePage = 'assets';
 require_once 'templates/head.php';
 require_once __DIR__ . '/../includes/db_connect.php';
+require_once __DIR__ . '/../includes/available_balance.php';
 
 $userId = (int)($_SESSION['user_id'] ?? 0);
 
@@ -28,6 +29,8 @@ function assets_fetch_wallet_balance(mysqli $dbc, int $userId, string $symbol): 
 
 $btcAmount = assets_fetch_wallet_balance($dbc, $userId, 'BTC');
 $ethAmount = assets_fetch_wallet_balance($dbc, $userId, 'ETH');
+$gbpBalancePayload = finpay_get_available_balance_gbp($dbc, $userId);
+$gbpAmount = (float)($gbpBalancePayload['amount'] ?? 0.0);
 ?>
 <body>
 
@@ -215,6 +218,16 @@ $ethAmount = assets_fetch_wallet_balance($dbc, $userId, 'ETH');
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        window.assetSwapDefaults = {
+            symbol: 'BTC',
+            name: 'Bitcoin',
+            icon: 'fab fa-bitcoin',
+            color: '#f59e0b',
+            gbpAmount: <?php echo json_encode((float)$gbpAmount, JSON_UNESCAPED_SLASHES); ?>,
+            btcAmount: <?php echo json_encode((float)$btcAmount, JSON_UNESCAPED_SLASHES); ?>,
+            ethAmount: <?php echo json_encode((float)$ethAmount, JSON_UNESCAPED_SLASHES); ?>
+        };
+
         (function () {
             var portfolio = {
                 BTC: <?php echo json_encode((float)$btcAmount, JSON_UNESCAPED_SLASHES); ?>,
@@ -384,6 +397,44 @@ $ethAmount = assets_fetch_wallet_balance($dbc, $userId, 'ETH');
 
             fetchAndRender();
             setInterval(fetchAndRender, 20000);
+
+            window.addEventListener('finpay:swap-completed', function (event) {
+                var detail = (event && event.detail) ? event.detail : {};
+                var payCurrency = String(detail.payCurrency || '').toUpperCase();
+                var receiveCurrency = String(detail.receiveCurrency || '').toUpperCase();
+                var payAmount = Number(detail.payAmount || 0);
+                var receiveAmount = Number(detail.receiveAmount || 0);
+
+                if (!Number.isFinite(payAmount) || !Number.isFinite(receiveAmount) || payAmount <= 0 || receiveAmount <= 0) {
+                    return;
+                }
+
+                if (payCurrency === 'BTC') {
+                    portfolio.BTC = Math.max(0, Number(portfolio.BTC || 0) - payAmount);
+                    window.assetSwapDefaults.btcAmount = portfolio.BTC;
+                }
+                if (payCurrency === 'ETH') {
+                    portfolio.ETH = Math.max(0, Number(portfolio.ETH || 0) - payAmount);
+                    window.assetSwapDefaults.ethAmount = portfolio.ETH;
+                }
+                if (payCurrency === 'GBP') {
+                    window.assetSwapDefaults.gbpAmount = Math.max(0, Number(window.assetSwapDefaults.gbpAmount || 0) - payAmount);
+                }
+
+                if (receiveCurrency === 'BTC') {
+                    portfolio.BTC = Number(portfolio.BTC || 0) + receiveAmount;
+                    window.assetSwapDefaults.btcAmount = portfolio.BTC;
+                }
+                if (receiveCurrency === 'ETH') {
+                    portfolio.ETH = Number(portfolio.ETH || 0) + receiveAmount;
+                    window.assetSwapDefaults.ethAmount = portfolio.ETH;
+                }
+                if (receiveCurrency === 'GBP') {
+                    window.assetSwapDefaults.gbpAmount = Number(window.assetSwapDefaults.gbpAmount || 0) + receiveAmount;
+                }
+
+                fetchAndRender();
+            });
 
             [1, 2, 3].forEach(function (slot) {
                 var row = document.getElementById('trendRow' + slot);

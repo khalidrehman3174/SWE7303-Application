@@ -26,6 +26,8 @@
                     <i id="swapPayChevron" class="fas fa-chevron-down text-secondary ms-1" style="font-size: 0.75rem; opacity: 0;"></i>
                 </div>
             </div>
+
+            <div id="swapInlineError" class="d-none mt-3" style="font-size: 0.82rem; color: #ef4444; font-weight: 600; line-height: 1.4;"></div>
         </div>
 
         <!-- Swap Button -->
@@ -94,6 +96,42 @@
     </div>
 </div>
 
+<!-- Swap Review Modal (Offcanvas) -->
+<div class="offcanvas offcanvas-end chat-modal" tabindex="-1" id="swapReviewModal" style="z-index: 10510;">
+    <div class="chat-header pb-3 border-bottom border-secondary border-opacity-10 align-items-center">
+        <div id="swapReviewBackBtn" class="shadow-sm" style="cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border-radius: 14px; border: 1px solid var(--border-light); background: var(--bg-surface); transition: background 0.2s;"><i class="fas fa-arrow-left"></i></div>
+        <div class="text-end">
+            <div style="font-weight: 700; font-size: 1.1rem;">Review Order</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fas fa-shield-check text-accent me-1"></i> Confirm details</div>
+        </div>
+    </div>
+
+    <div class="chat-body d-flex flex-column" style="padding: 1.5rem 1rem 6rem 1rem; overflow-y: auto; position: relative;">
+        <div class="p-3 mb-4 rounded-4" style="background: var(--bg-surface-light); border: 1px solid var(--border-light);">
+            <div style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;">Swap Summary</div>
+            <div id="swapReviewSummary" style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600; line-height: 1.6;">No order selected.</div>
+        </div>
+
+        <div class="p-3 mb-4 rounded-4" style="background: var(--bg-surface-light); border: 1px solid var(--border-light);">
+            <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">
+                <div><i class="fas fa-info-circle me-2 text-accent"></i>Exchange Rate</div>
+                <div id="swapReviewRateText">--</div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">
+                <div>Network Fee</div>
+                <div class="text-success text-end">Free</div>
+            </div>
+        </div>
+
+        <div class="mt-4 mt-auto w-100" style="padding-bottom: 2rem;">
+            <button id="swapProceedBtn" class="btn-pro btn-pro-primary w-100" style="padding: 16px; border-radius: 100px; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 25px rgba(239, 184, 12, 0.25);">Proceed to Swap</button>
+            <div class="text-center mt-4">
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0; opacity: 0.8;"><i class="fas fa-lock text-success me-1"></i> Review and confirm before execution.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     (function () {
         if (window.__finpaySwapWidgetInit) {
@@ -127,6 +165,7 @@
             var receiveSelector = document.getElementById('swapReceiveSelector');
             var paySymbol = document.getElementById('swapPaySymbol');
             var receiveSymbol = document.getElementById('swapReceiveSymbol');
+            var inlineError = document.getElementById('swapInlineError');
             var payIconWrap = document.getElementById('swapPayIconWrap');
             var receiveIconWrap = document.getElementById('swapReceiveIconWrap');
             var payIcon = document.getElementById('swapPayIcon');
@@ -139,12 +178,20 @@
             var helperText = document.getElementById('swapHelperText');
             var flipBtn = document.getElementById('swapFlipBtn');
             var reviewBtn = document.getElementById('swapReviewBtn');
+            var proceedBtn = document.getElementById('swapProceedBtn');
             var assetDropdown = document.getElementById('swapAssetDropdown');
             var swapBody = swapModal.querySelector('.chat-body');
+            var reviewSummary = document.getElementById('swapReviewSummary');
+            var reviewRateText = document.getElementById('swapReviewRateText');
+            var reviewModal = document.getElementById('swapReviewModal');
+            var reviewBackBtn = document.getElementById('swapReviewBackBtn');
+
+            var swapModalInstance = (window.bootstrap && window.bootstrap.Offcanvas) ? window.bootstrap.Offcanvas.getOrCreateInstance(swapModal) : null;
+            var reviewModalInstance = (window.bootstrap && window.bootstrap.Offcanvas && reviewModal) ? window.bootstrap.Offcanvas.getOrCreateInstance(reviewModal) : null;
 
             var pathName = String(window.location.pathname || '').toLowerCase();
-            var isAssetsPage = pathName.indexOf('/user/assets.php') !== -1 || pathName.endsWith('/assets.php');
-            var isAssetDetailsPage = pathName.indexOf('/user/asset_details.php') !== -1 || pathName.endsWith('/asset_details.php');
+            var isAssetsPage = pathName.indexOf('/user/assets') !== -1 || /\/assets(?:\.php)?$/.test(pathName);
+            var isAssetDetailsPage = pathName.indexOf('/user/asset_details') !== -1 || /\/asset_details(?:\.php)?$/.test(pathName);
             var allowAssetSelection = isAssetsPage;
 
             if (!payInput || !receiveInput || !paySelector || !receiveSelector || !paySymbol || !receiveSymbol || !flipBtn || !assetDropdown) {
@@ -168,6 +215,10 @@
 
             var state = {
                 isPayFiat: true,
+                isSubmitting: false,
+                returnToSwap: false,
+                movingToReview: false,
+                pendingOrder: null,
                 asset: {
                     symbol: defaultSymbol,
                     name: defaultSymbol === 'ETH' ? 'Ethereum' : 'Bitcoin',
@@ -185,6 +236,253 @@
 
             if (cfg && typeof cfg.amount !== 'undefined') {
                 state.balances[state.asset.symbol] = Number(cfg.amount || 0);
+            }
+
+            if (cfg && typeof cfg.gbpAmount !== 'undefined') {
+                state.balances.GBP = Number(cfg.gbpAmount || 0);
+            }
+            if (cfg && typeof cfg.btcAmount !== 'undefined') {
+                state.balances.BTC = Number(cfg.btcAmount || 0);
+            }
+            if (cfg && typeof cfg.ethAmount !== 'undefined') {
+                state.balances.ETH = Number(cfg.ethAmount || 0);
+            }
+
+            function emitActivity(kind, title, message, important, meta) {
+                var safeKind = kind || 'info';
+                var safeTitle = title || 'Swap';
+                var safeMessage = message || '';
+                var safeMeta = (meta && typeof meta === 'object') ? meta : {};
+                var detail = {
+                    kind: safeKind,
+                    type: safeKind,
+                    title: safeTitle,
+                    message: safeMessage,
+                    important: important !== false,
+                    source: safeMeta.source || 'swap_widget',
+                    asset: safeMeta.asset || state.asset.symbol,
+                    symbol: safeMeta.symbol || state.asset.symbol,
+                    details: safeMeta.details && typeof safeMeta.details === 'object' ? safeMeta.details : null,
+                };
+
+                if (helperText && safeMessage) {
+                    var color = safeKind === 'error' ? '#ef4444' : (safeKind === 'success' ? '#16a34a' : 'var(--text-secondary)');
+                    helperText.style.color = color;
+                    helperText.textContent = safeMessage;
+                }
+
+                try {
+                    window.dispatchEvent(new CustomEvent('finpay:activity', { detail: detail }));
+                } catch (e) {
+                    if (typeof window.finpayNotify === 'function') {
+                        window.finpayNotify(safeMessage, { type: safeKind, title: safeTitle });
+                    }
+                }
+            }
+
+            function clearInlineError() {
+                if (!inlineError) {
+                    return;
+                }
+
+                inlineError.textContent = '';
+                inlineError.classList.add('d-none');
+            }
+
+            function setInlineError(message) {
+                if (!inlineError) {
+                    return;
+                }
+
+                inlineError.textContent = String(message || '');
+                inlineError.classList.remove('d-none');
+            }
+
+            function setActionState() {
+                if (reviewBtn) {
+                    if (state.isSubmitting) {
+                        reviewBtn.textContent = 'Processing...';
+                        reviewBtn.disabled = true;
+                    } else {
+                        var paySym = state.isPayFiat ? 'GBP' : state.asset.symbol;
+                        var receiveSym = state.isPayFiat ? state.asset.symbol : 'GBP';
+                        reviewBtn.textContent = 'Review ' + paySym + ' -> ' + receiveSym;
+                        reviewBtn.disabled = false;
+                    }
+                }
+
+                if (proceedBtn) {
+                    proceedBtn.disabled = state.isSubmitting;
+                    proceedBtn.textContent = state.isSubmitting ? 'Processing Swap...' : 'Proceed to Swap';
+                }
+            }
+
+            function quoteAvailable() {
+                return Number(state.rateGbpPerAsset || 0) > 0;
+            }
+
+            function validateOrder() {
+                var payAmount = toNumber(payInput.value);
+                var receiveAmount = toNumber(receiveInput.value);
+                var payCurrency = state.isPayFiat ? 'GBP' : state.asset.symbol;
+                var receiveCurrency = state.isPayFiat ? state.asset.symbol : 'GBP';
+                var available = Number(state.balances[payCurrency] || 0);
+                var payText = payCurrency === 'GBP' ? ('GBP ' + formatFiat(payAmount)) : (formatCrypto(payAmount) + ' ' + payCurrency);
+                var availableText = payCurrency === 'GBP' ? ('GBP ' + formatFiat(available)) : (formatCrypto(available) + ' ' + payCurrency);
+
+                if (payAmount <= 0) {
+                    return { ok: false, code: 'invalid_amount', message: 'Enter an amount greater than zero.' };
+                }
+
+                if (payAmount > available) {
+                    return {
+                        ok: false,
+                        code: 'insufficient_balance',
+                        message: 'Insufficient ' + payCurrency + ' balance. You entered ' + payText + ', but only ' + availableText + ' is available.'
+                    };
+                }
+
+                if (!quoteAvailable()) {
+                    return {
+                        ok: false,
+                        code: 'quote_unavailable',
+                        message: 'Live quote unavailable for ' + state.asset.symbol + '/GBP. Please wait a moment and try again.'
+                    };
+                }
+
+                if (receiveAmount <= 0) {
+                    return { ok: false, code: 'zero_receive', message: 'Swap output is too low. Increase the amount and retry.' };
+                }
+
+                return {
+                    ok: true,
+                    payAmount: payAmount,
+                    receiveAmount: receiveAmount,
+                    payCurrency: payCurrency,
+                    receiveCurrency: receiveCurrency
+                };
+            }
+
+            function buildReviewSummary(order) {
+                var payText = order.payCurrency === 'GBP' ? ('GBP ' + formatFiat(order.payAmount)) : (formatCrypto(order.payAmount) + ' ' + order.payCurrency);
+                var receiveText = order.receiveCurrency === 'GBP' ? ('GBP ' + formatFiat(order.receiveAmount)) : (formatCrypto(order.receiveAmount) + ' ' + order.receiveCurrency);
+                var rateLine = '';
+
+                if (state.isPayFiat) {
+                    rateLine = '1 GBP = ' + formatCrypto(1 / Number(state.rateGbpPerAsset || 1)) + ' ' + state.asset.symbol;
+                } else {
+                    rateLine = '1 ' + state.asset.symbol + ' = GBP ' + formatFiat(Number(state.rateGbpPerAsset || 0));
+                }
+
+                return '<div style="margin-bottom: 4px;">Pay: <strong>' + payText + '</strong></div>' +
+                    '<div style="margin-bottom: 4px;">Receive: <strong>' + receiveText + '</strong></div>' +
+                    '<div style="margin-bottom: 4px;">Rate: ' + rateLine + '</div>' +
+                    '<div style="color: var(--text-secondary); font-size: 0.82rem;">Fee: Free • Execution: Instant</div>';
+            }
+
+            function resetReviewState() {
+                state.isSubmitting = false;
+                state.pendingOrder = null;
+                setActionState();
+                clearInlineError();
+            }
+
+            function openReviewOffcanvas(order) {
+                state.pendingOrder = order;
+                if (reviewSummary) {
+                    reviewSummary.innerHTML = buildReviewSummary(order);
+                }
+
+                if (reviewRateText) {
+                    if (state.isPayFiat) {
+                        reviewRateText.textContent = '1 GBP = ' + formatCrypto(1 / Number(state.rateGbpPerAsset || 1)) + ' ' + state.asset.symbol;
+                    } else {
+                        reviewRateText.textContent = '1 ' + state.asset.symbol + ' = GBP ' + formatFiat(Number(state.rateGbpPerAsset || 0));
+                    }
+                }
+
+                if (swapModalInstance) {
+                    state.movingToReview = true;
+                    swapModalInstance.hide();
+                }
+                if (reviewModalInstance) {
+                    reviewModalInstance.show();
+                }
+            }
+
+            function applyBalanceUpdate(order) {
+                state.balances[order.payCurrency] = Math.max(0, Number(state.balances[order.payCurrency] || 0) - Number(order.payAmount || 0));
+                state.balances[order.receiveCurrency] = Number(state.balances[order.receiveCurrency] || 0) + Number(order.receiveAmount || 0);
+                updateBalances();
+
+                payInput.value = order.payCurrency === 'GBP' ? '0.00' : '0.000000';
+                recalc();
+            }
+
+            function executeOrder(order) {
+                if (state.isSubmitting) {
+                    return;
+                }
+
+                state.isSubmitting = true;
+                setActionState();
+
+                var executedAt = new Date().toISOString();
+                var reference = 'SWP-' + String(Date.now());
+                var payDisplay = order.payCurrency === 'GBP'
+                    ? ('GBP ' + formatFiat(order.payAmount))
+                    : (formatCrypto(order.payAmount) + ' ' + order.payCurrency);
+                var receiveDisplay = order.receiveCurrency === 'GBP'
+                    ? ('GBP ' + formatFiat(order.receiveAmount))
+                    : (formatCrypto(order.receiveAmount) + ' ' + order.receiveCurrency);
+
+                setTimeout(function () {
+                    applyBalanceUpdate(order);
+                    state.isSubmitting = false;
+                    setActionState();
+                    state.pendingOrder = null;
+
+                    emitActivity(
+                        'success',
+                        'Swap Completed',
+                        'Successfully swapped ' + payDisplay + ' to ' + receiveDisplay + '.',
+                        true,
+                        {
+                            source: 'swap_widget',
+                            asset: state.asset.symbol,
+                            symbol: state.asset.symbol,
+                            details: {
+                                source: 'swaps',
+                                status: 'COMPLETED',
+                                amount: payDisplay + ' -> ' + receiveDisplay,
+                                method: 'Instant Swap',
+                                reference: reference,
+                                time: executedAt,
+                                asset: state.asset.symbol,
+                            }
+                        }
+                    );
+                    clearInlineError();
+
+                    try {
+                        window.dispatchEvent(new CustomEvent('finpay:swap-completed', {
+                            detail: {
+                                payCurrency: order.payCurrency,
+                                payAmount: order.payAmount,
+                                receiveCurrency: order.receiveCurrency,
+                                receiveAmount: order.receiveAmount,
+                                asset: state.asset.symbol,
+                            }
+                        }));
+                    } catch (e) {
+                        // no-op
+                    }
+
+                    if (reviewModalInstance) {
+                        state.returnToSwap = true;
+                        reviewModalInstance.hide();
+                    }
+                }, 750);
             }
 
             function updateSelectors() {
@@ -313,9 +611,7 @@
                 }
 
                 if (reviewBtn) {
-                    var paySym = state.isPayFiat ? 'GBP' : state.asset.symbol;
-                    var receiveSym = state.isPayFiat ? state.asset.symbol : 'GBP';
-                    reviewBtn.innerHTML = 'Review ' + paySym + ' → ' + receiveSym;
+                    setActionState();
                 }
             }
 
@@ -329,6 +625,7 @@
                 updateSelectors();
                 updateBalances();
                 refreshQuote();
+                resetReviewState();
             }
 
             selectorRows.forEach(function (row) {
@@ -414,26 +711,80 @@
                 updateSelectors();
                 updateBalances();
                 recalc();
+                resetReviewState();
             });
 
             payInput.addEventListener('input', function () {
+                resetReviewState();
                 recalc();
             });
+
+            if (reviewBtn) {
+                reviewBtn.addEventListener('click', function () {
+                    var validation = validateOrder();
+                    if (!validation.ok) {
+                        setInlineError(validation.message);
+                        emitActivity('error', 'Swap Error', validation.message, true);
+                        return;
+                    }
+
+                    clearInlineError();
+                    openReviewOffcanvas(validation);
+                });
+            }
+
+            if (proceedBtn) {
+                proceedBtn.addEventListener('click', function () {
+                    if (!state.pendingOrder) {
+                        emitActivity('error', 'Swap Error', 'No review order found. Please review the order again.', true);
+                        return;
+                    }
+
+                    executeOrder(state.pendingOrder);
+                });
+            }
+
+            if (reviewBackBtn) {
+                reviewBackBtn.addEventListener('click', function () {
+                    state.returnToSwap = true;
+                    if (reviewModalInstance) {
+                        reviewModalInstance.hide();
+                    }
+                });
+            }
+
+            if (reviewModal) {
+                reviewModal.addEventListener('hidden.bs.offcanvas', function () {
+                    if (state.returnToSwap && swapModalInstance) {
+                        state.returnToSwap = false;
+                        swapModalInstance.show();
+                    }
+                });
+            }
 
             swapModal.addEventListener('shown.bs.offcanvas', function () {
                 updateSelectors();
                 updateBalances();
                 refreshQuote();
+                setActionState();
             });
 
             swapModal.addEventListener('hidden.bs.offcanvas', function () {
                 assetDropdown.classList.add('d-none');
+                if (state.movingToReview) {
+                    state.movingToReview = false;
+                    return;
+                }
+                if (!state.returnToSwap) {
+                    resetReviewState();
+                }
             });
 
             updateSelectors();
             updateBalances();
             recalc();
             refreshQuote();
+            setActionState();
             setInterval(refreshQuote, 30000);
         }
 

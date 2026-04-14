@@ -50,6 +50,31 @@ if ($asset === 'GBP') {
 
 $amountDisplay = number_format($amount, $asset === 'GBP' ? 2 : 6);
 
+$btcSwapAmount = 0.0;
+$ethSwapAmount = 0.0;
+$swapStmt = mysqli_prepare($dbc, 'SELECT symbol, balance FROM wallets WHERE user_id = ? AND symbol IN (\'BTC\', \'ETH\')');
+if ($swapStmt) {
+    mysqli_stmt_bind_param($swapStmt, 'i', $userId);
+    mysqli_stmt_execute($swapStmt);
+    $swapResult = mysqli_stmt_get_result($swapStmt);
+    if ($swapResult) {
+        while ($swapRow = mysqli_fetch_assoc($swapResult)) {
+            $swapSymbol = strtoupper((string)($swapRow['symbol'] ?? ''));
+            $swapBalance = (float)($swapRow['balance'] ?? 0.0);
+            if ($swapSymbol === 'BTC') {
+                $btcSwapAmount = $swapBalance;
+            }
+            if ($swapSymbol === 'ETH') {
+                $ethSwapAmount = $swapBalance;
+            }
+        }
+    }
+    mysqli_stmt_close($swapStmt);
+}
+
+$swapGbpPayload = finpay_get_available_balance_gbp($dbc, $userId);
+$swapGbpAmount = (float)($swapGbpPayload['amount'] ?? 0.0);
+
 function asset_details_table_exists(mysqli $dbc, string $table): bool
 {
     $safe = trim($table);
@@ -1336,6 +1361,9 @@ $availableNetworks = $assetNetworks[$asset] ?? [
             'color' => $meta['color'],
             'amount' => $amount,
             'amountDisplay' => $amountDisplay,
+            'gbpAmount' => $swapGbpAmount,
+            'btcAmount' => $btcSwapAmount,
+            'ethAmount' => $ethSwapAmount,
         ], JSON_UNESCAPED_SLASHES); ?>;
 
         window.assetFeedSeed = <?php echo json_encode($assetFeedSeed, JSON_UNESCAPED_SLASHES); ?>;
@@ -1778,6 +1806,77 @@ $availableNetworks = $assetNetworks[$asset] ?? [
                         asset: String(cfg.asset || '').toUpperCase(),
                     });
                     pushAlert(kind === 'error' ? 'error' : (kind === 'warning' ? 'warning' : 'info'), title, message);
+                });
+
+                window.addEventListener('finpay:swap-completed', function (event) {
+                    var detail = (event && event.detail) ? event.detail : {};
+                    var payCurrency = String(detail.payCurrency || '').toUpperCase();
+                    var receiveCurrency = String(detail.receiveCurrency || '').toUpperCase();
+                    var payAmount = Number(detail.payAmount || 0);
+                    var receiveAmount = Number(detail.receiveAmount || 0);
+                    var currentAsset = String(cfg.asset || '').toUpperCase();
+
+                    if (!Number.isFinite(payAmount) || !Number.isFinite(receiveAmount) || payAmount <= 0 || receiveAmount <= 0) {
+                        return;
+                    }
+
+                    if (!window.assetSwapDefaults || typeof window.assetSwapDefaults !== 'object') {
+                        window.assetSwapDefaults = {};
+                    }
+
+                    if (payCurrency === 'GBP') {
+                        window.assetSwapDefaults.gbpAmount = Math.max(0, Number(window.assetSwapDefaults.gbpAmount || 0) - payAmount);
+                    }
+                    if (receiveCurrency === 'GBP') {
+                        window.assetSwapDefaults.gbpAmount = Number(window.assetSwapDefaults.gbpAmount || 0) + receiveAmount;
+                    }
+                    if (payCurrency === 'BTC') {
+                        window.assetSwapDefaults.btcAmount = Math.max(0, Number(window.assetSwapDefaults.btcAmount || 0) - payAmount);
+                    }
+                    if (receiveCurrency === 'BTC') {
+                        window.assetSwapDefaults.btcAmount = Number(window.assetSwapDefaults.btcAmount || 0) + receiveAmount;
+                    }
+                    if (payCurrency === 'ETH') {
+                        window.assetSwapDefaults.ethAmount = Math.max(0, Number(window.assetSwapDefaults.ethAmount || 0) - payAmount);
+                    }
+                    if (receiveCurrency === 'ETH') {
+                        window.assetSwapDefaults.ethAmount = Number(window.assetSwapDefaults.ethAmount || 0) + receiveAmount;
+                    }
+
+                    var delta = 0;
+                    if (payCurrency === currentAsset) {
+                        delta -= payAmount;
+                    }
+                    if (receiveCurrency === currentAsset) {
+                        delta += receiveAmount;
+                    }
+                    if (delta === 0) {
+                        return;
+                    }
+
+                    var updatedAmount = Math.max(0, Number(cfg.balance || 0) + delta);
+                    cfg.balance = updatedAmount;
+                    cfg.balanceDisplay = currentAsset === 'GBP'
+                        ? updatedAmount.toFixed(2)
+                        : updatedAmount.toFixed(6).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+
+                    var cryptoBalanceEl = document.getElementById('crypto-balance');
+                    if (cryptoBalanceEl) {
+                        cryptoBalanceEl.setAttribute('data-amount', String(updatedAmount));
+                        cryptoBalanceEl.textContent = cfg.balanceDisplay + ' ' + currentAsset;
+                    }
+
+                    var mobileHoldingEl = document.querySelector('.asset-mobile-holding-value');
+                    if (mobileHoldingEl) {
+                        mobileHoldingEl.textContent = cfg.balanceDisplay + ' ' + currentAsset;
+                    }
+
+                    var sublineEls = document.querySelectorAll('.transfer-subline');
+                    sublineEls.forEach(function (el) {
+                        if (el && el.textContent && el.textContent.indexOf('Balance:') === 0) {
+                            el.textContent = 'Balance: ' + cfg.balanceDisplay + ' ' + currentAsset;
+                        }
+                    });
                 });
 
                 var selectedDepositNetwork = null;
