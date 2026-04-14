@@ -450,6 +450,59 @@ function cards_status_badge(string $status): array
                     grid-template-columns: 1fr;
                     gap: 0.75rem;
                 }
+                .card-interactive {
+                    cursor: pointer;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+                .card-interactive:focus-visible {
+                    outline: 2px solid rgba(16, 185, 129, 0.45);
+                    outline-offset: 2px;
+                    border-radius: 14px;
+                }
+                .card-interactive.is-active .pro-card-widget {
+                    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.45), 0 14px 34px rgba(0, 0, 0, 0.25);
+                    transform: translateY(-2px);
+                }
+                .card-details-panel {
+                    margin-top: 0.95rem;
+                    background: var(--list-bg);
+                    border: 1px solid var(--border-light);
+                    border-radius: 18px;
+                    padding: 1rem;
+                }
+                .card-details-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 0.75rem;
+                }
+                @media (max-width: 575.98px) {
+                    .card-details-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+                .card-detail-item {
+                    background: var(--bg-surface);
+                    border: 1px solid var(--border-light);
+                    border-radius: 12px;
+                    padding: 0.7rem 0.75rem;
+                }
+                .card-detail-label {
+                    font-size: 0.74rem;
+                    font-weight: 700;
+                    letter-spacing: 0.2px;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    margin-bottom: 0.2rem;
+                }
+                .card-detail-value {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    word-break: break-word;
+                }
+                .card-shipping-wrap {
+                    margin-top: 0.75rem;
+                }
                 .cards-chip {
                     display: inline-flex;
                     align-items: center;
@@ -525,8 +578,50 @@ function cards_status_badge(string $status): array
                                         $bin = htmlspecialchars((string)$card['card_bin'], ENT_QUOTES, 'UTF-8');
                                         $last4 = htmlspecialchars((string)$card['card_last4'], ENT_QUOTES, 'UTF-8');
                                         $holder = htmlspecialchars((string)$card['holder_name'], ENT_QUOTES, 'UTF-8');
+                                        $maskedNumber = (string)$card['card_bin'] . ' **** **** ' . (string)$card['card_last4'];
+                                        $shippingParts = [];
+                                        $shipAddress1 = trim((string)($card['shipping_address_line1'] ?? ''));
+                                        $shipAddress2 = trim((string)($card['shipping_address_line2'] ?? ''));
+                                        $shipCity = trim((string)($card['shipping_city'] ?? ''));
+                                        $shipState = trim((string)($card['shipping_state'] ?? ''));
+                                        $shipPostal = trim((string)($card['shipping_postal_code'] ?? ''));
+                                        $shipCountry = trim((string)($card['shipping_country'] ?? ''));
+                                        $shipFullName = trim((string)($card['shipping_full_name'] ?? ''));
+
+                                        if ($shipAddress1 !== '') {
+                                            $shippingParts[] = $shipAddress1;
+                                        }
+                                        if ($shipAddress2 !== '') {
+                                            $shippingParts[] = $shipAddress2;
+                                        }
+                                        $cityStatePostal = trim($shipCity . ($shipState !== '' ? ', ' . $shipState : '') . ($shipPostal !== '' ? ' ' . $shipPostal : ''));
+                                        if ($cityStatePostal !== '') {
+                                            $shippingParts[] = $cityStatePostal;
+                                        }
+                                        if ($shipCountry !== '') {
+                                            $shippingParts[] = $shipCountry;
+                                        }
+                                        $shippingAddressText = implode(', ', $shippingParts);
+                                        if ($shippingAddressText === '') {
+                                            $shippingAddressText = 'N/A';
+                                        }
                                     ?>
-                                    <div class="carousel-item-card">
+                                    <div
+                                        class="carousel-item-card card-interactive js-card-item"
+                                        role="button"
+                                        tabindex="0"
+                                        data-card-number="<?php echo htmlspecialchars($maskedNumber, ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-type="<?php echo htmlspecialchars($isPhysical ? 'Physical' : 'Virtual', ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-brand="<?php echo htmlspecialchars(ucfirst((string)$card['card_brand']), ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-status="<?php echo htmlspecialchars($badge['text'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-holder="<?php echo htmlspecialchars((string)$card['holder_name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-expiry="<?php echo htmlspecialchars($monthText . '/' . $yearText, ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-requested="<?php echo htmlspecialchars((string)($card['requested_at'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-issued="<?php echo htmlspecialchars((string)($card['issued_at'] ?: 'Pending issuance'), ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-shipping-name="<?php echo htmlspecialchars($shipFullName !== '' ? $shipFullName : 'N/A', ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-shipping-address="<?php echo htmlspecialchars($shippingAddressText, ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-card-shipping-phone="<?php echo htmlspecialchars((string)($card['shipping_phone'] ?: 'N/A'), ENT_QUOTES, 'UTF-8'); ?>"
+                                    >
                                         <div class="pro-card-widget <?php echo $isPhysical ? 'physical' : ''; ?>">
                                             <div class="card-inner">
                                                 <div class="d-flex justify-content-between align-items-start">
@@ -549,6 +644,60 @@ function cards_status_badge(string $status): array
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <div class="card-details-panel" id="cardDetailsPanel">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:0.7rem; margin-bottom:0.65rem;">
+                                <div style="font-weight:700; font-size:0.98rem; color:var(--text-primary);">Card Details</div>
+                                <span class="cards-chip" id="cardDetailsStatusChip" style="background:rgba(16,185,129,0.14); color:#047857;">Selected</span>
+                            </div>
+                            <div class="card-details-grid">
+                                <div class="card-detail-item">
+                                    <div class="card-detail-label">Card Number</div>
+                                    <div class="card-detail-value" id="cardDetailsNumber">-</div>
+                                </div>
+                                <div class="card-detail-item">
+                                    <div class="card-detail-label">Type</div>
+                                    <div class="card-detail-value" id="cardDetailsType">-</div>
+                                </div>
+                                <div class="card-detail-item">
+                                    <div class="card-detail-label">Brand</div>
+                                    <div class="card-detail-value" id="cardDetailsBrand">-</div>
+                                </div>
+                                <div class="card-detail-item">
+                                    <div class="card-detail-label">Holder</div>
+                                    <div class="card-detail-value" id="cardDetailsHolder">-</div>
+                                </div>
+                                <div class="card-detail-item">
+                                    <div class="card-detail-label">Expiry</div>
+                                    <div class="card-detail-value" id="cardDetailsExpiry">-</div>
+                                </div>
+                                <div class="card-detail-item">
+                                    <div class="card-detail-label">Requested At</div>
+                                    <div class="card-detail-value" id="cardDetailsRequested">-</div>
+                                </div>
+                                <div class="card-detail-item">
+                                    <div class="card-detail-label">Issued At</div>
+                                    <div class="card-detail-value" id="cardDetailsIssued">-</div>
+                                </div>
+                            </div>
+                            <div class="card-shipping-wrap" id="cardShippingWrap" style="display:none;">
+                                <div style="font-weight:700; font-size:0.86rem; color:var(--text-primary); margin-bottom:0.45rem;">Shipping Details</div>
+                                <div class="card-details-grid">
+                                    <div class="card-detail-item">
+                                        <div class="card-detail-label">Recipient</div>
+                                        <div class="card-detail-value" id="cardDetailsShipName">-</div>
+                                    </div>
+                                    <div class="card-detail-item">
+                                        <div class="card-detail-label">Phone</div>
+                                        <div class="card-detail-value" id="cardDetailsShipPhone">-</div>
+                                    </div>
+                                    <div class="card-detail-item" style="grid-column:1 / -1;">
+                                        <div class="card-detail-label">Address</div>
+                                        <div class="card-detail-value" id="cardDetailsShipAddress">-</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -724,6 +873,71 @@ function cards_status_badge(string $status): array
 
     <?php require_once 'templates/bottom_nav.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var cardItems = Array.prototype.slice.call(document.querySelectorAll('.js-card-item'));
+            if (!cardItems.length) {
+                return;
+            }
+
+            var cardDetailsStatusChip = document.getElementById('cardDetailsStatusChip');
+            var cardDetailsNumber = document.getElementById('cardDetailsNumber');
+            var cardDetailsType = document.getElementById('cardDetailsType');
+            var cardDetailsBrand = document.getElementById('cardDetailsBrand');
+            var cardDetailsHolder = document.getElementById('cardDetailsHolder');
+            var cardDetailsExpiry = document.getElementById('cardDetailsExpiry');
+            var cardDetailsRequested = document.getElementById('cardDetailsRequested');
+            var cardDetailsIssued = document.getElementById('cardDetailsIssued');
+            var cardShippingWrap = document.getElementById('cardShippingWrap');
+            var cardDetailsShipName = document.getElementById('cardDetailsShipName');
+            var cardDetailsShipPhone = document.getElementById('cardDetailsShipPhone');
+            var cardDetailsShipAddress = document.getElementById('cardDetailsShipAddress');
+
+            function renderCardDetails(cardNode) {
+                cardItems.forEach(function (node) {
+                    node.classList.remove('is-active');
+                });
+                cardNode.classList.add('is-active');
+
+                var ds = cardNode.dataset;
+                if (cardDetailsStatusChip) {
+                    cardDetailsStatusChip.textContent = ds.cardStatus || 'Selected';
+                }
+                if (cardDetailsNumber) cardDetailsNumber.textContent = ds.cardNumber || '-';
+                if (cardDetailsType) cardDetailsType.textContent = ds.cardType || '-';
+                if (cardDetailsBrand) cardDetailsBrand.textContent = ds.cardBrand || '-';
+                if (cardDetailsHolder) cardDetailsHolder.textContent = ds.cardHolder || '-';
+                if (cardDetailsExpiry) cardDetailsExpiry.textContent = ds.cardExpiry || '-';
+                if (cardDetailsRequested) cardDetailsRequested.textContent = ds.cardRequested || '-';
+                if (cardDetailsIssued) cardDetailsIssued.textContent = ds.cardIssued || '-';
+
+                var isPhysical = (ds.cardType || '').toLowerCase() === 'physical';
+                if (cardShippingWrap) {
+                    cardShippingWrap.style.display = isPhysical ? 'block' : 'none';
+                }
+                if (isPhysical) {
+                    if (cardDetailsShipName) cardDetailsShipName.textContent = ds.cardShippingName || 'N/A';
+                    if (cardDetailsShipPhone) cardDetailsShipPhone.textContent = ds.cardShippingPhone || 'N/A';
+                    if (cardDetailsShipAddress) cardDetailsShipAddress.textContent = ds.cardShippingAddress || 'N/A';
+                }
+            }
+
+            cardItems.forEach(function (item) {
+                item.addEventListener('click', function () {
+                    renderCardDetails(item);
+                });
+
+                item.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        renderCardDetails(item);
+                    }
+                });
+            });
+
+            renderCardDetails(cardItems[0]);
+        });
+    </script>
 
 </body>
 </html>

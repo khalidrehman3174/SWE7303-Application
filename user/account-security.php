@@ -27,13 +27,18 @@ function account_ensure_user_columns(mysqli $dbc): void
         }
     }
 
-    account_add_column_if_missing($dbc, $existingColumns, 'full_name', 'full_name VARCHAR(120) NULL AFTER username');
-    account_add_column_if_missing($dbc, $existingColumns, 'phone_number', 'phone_number VARCHAR(40) NULL AFTER email');
-    account_add_column_if_missing($dbc, $existingColumns, 'country', 'country VARCHAR(80) NULL AFTER phone_number');
-    account_add_column_if_missing($dbc, $existingColumns, 'privacy_policy_accepted_at', 'privacy_policy_accepted_at DATETIME NULL AFTER is_banned');
-    account_add_column_if_missing($dbc, $existingColumns, 'terms_conditions_accepted_at', 'terms_conditions_accepted_at DATETIME NULL AFTER privacy_policy_accepted_at');
-    account_add_column_if_missing($dbc, $existingColumns, 'account_status', "account_status VARCHAR(20) NOT NULL DEFAULT 'active' AFTER terms_conditions_accepted_at");
-    account_add_column_if_missing($dbc, $existingColumns, 'account_closed_at', 'account_closed_at DATETIME NULL AFTER account_status');
+    account_add_column_if_missing($dbc, $existingColumns, 'is_verified', 'is_verified TINYINT(1) NOT NULL DEFAULT 0');
+    account_add_column_if_missing($dbc, $existingColumns, 'is_banned', 'is_banned TINYINT(1) NOT NULL DEFAULT 0');
+    account_add_column_if_missing($dbc, $existingColumns, 'updated_at', 'updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+
+    // Keep account settings fields independent from strict column ordering in older schemas.
+    account_add_column_if_missing($dbc, $existingColumns, 'full_name', 'full_name VARCHAR(120) NULL');
+    account_add_column_if_missing($dbc, $existingColumns, 'phone_number', 'phone_number VARCHAR(40) NULL');
+    account_add_column_if_missing($dbc, $existingColumns, 'country', 'country VARCHAR(80) NULL');
+    account_add_column_if_missing($dbc, $existingColumns, 'privacy_policy_accepted_at', 'privacy_policy_accepted_at DATETIME NULL');
+    account_add_column_if_missing($dbc, $existingColumns, 'terms_conditions_accepted_at', 'terms_conditions_accepted_at DATETIME NULL');
+    account_add_column_if_missing($dbc, $existingColumns, 'account_status', "account_status VARCHAR(20) NOT NULL DEFAULT 'active'");
+    account_add_column_if_missing($dbc, $existingColumns, 'account_closed_at', 'account_closed_at DATETIME NULL');
 }
 
 function account_fetch_user_row(mysqli $dbc, int $uid): ?array
@@ -94,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $stmt = mysqli_prepare(
                     $dbc,
-                    'UPDATE users SET full_name = ?, phone_number = ?, country = ?, updated_at = NOW() WHERE id = ? LIMIT 1'
+                    'UPDATE users SET full_name = ?, phone_number = ?, country = ? WHERE id = ? LIMIT 1'
                 );
                 if ($stmt) {
                     mysqli_stmt_bind_param($stmt, 'sssi', $fullName, $phoneNumber, $country, $currentUserId);
@@ -138,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $stmt = mysqli_prepare(
                         $dbc,
-                        'UPDATE users SET username = ?, email = ?, updated_at = NOW() WHERE id = ? LIMIT 1'
+                        'UPDATE users SET username = ?, email = ? WHERE id = ? LIMIT 1'
                     );
                     if ($stmt) {
                         mysqli_stmt_bind_param($stmt, 'ssi', $username, $email, $currentUserId);
@@ -177,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
                 $stmt = mysqli_prepare(
                     $dbc,
-                    'UPDATE users SET password = ?, updated_at = NOW() WHERE id = ? LIMIT 1'
+                    'UPDATE users SET password = ? WHERE id = ? LIMIT 1'
                 );
                 if ($stmt) {
                     mysqli_stmt_bind_param($stmt, 'si', $newHash, $currentUserId);
@@ -199,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = mysqli_prepare(
                 $dbc,
-                'UPDATE users SET privacy_policy_accepted_at = ?, terms_conditions_accepted_at = ?, updated_at = NOW() WHERE id = ? LIMIT 1'
+                'UPDATE users SET privacy_policy_accepted_at = ?, terms_conditions_accepted_at = ? WHERE id = ? LIMIT 1'
             );
 
             if ($stmt) {
@@ -227,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $closedStatus = 'closed';
                 $stmt = mysqli_prepare(
                     $dbc,
-                    'UPDATE users SET is_banned = 1, account_status = ?, account_closed_at = NOW(), updated_at = NOW() WHERE id = ? LIMIT 1'
+                    'UPDATE users SET is_banned = 1, account_status = ?, account_closed_at = NOW() WHERE id = ? LIMIT 1'
                 );
                 if ($stmt) {
                     mysqli_stmt_bind_param($stmt, 'si', $closedStatus, $currentUserId);
